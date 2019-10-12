@@ -57,7 +57,7 @@ startup
 {
    vars.totaligt = 0;
    vars.progressIGT = 0;
-   refreshRate = 60;
+   // refreshRate = 60;
 }
 
 start

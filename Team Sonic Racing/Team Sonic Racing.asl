@@ -147,12 +147,7 @@ split
 		}
 		else
 		{
-			// "current.requiredlaps != 0" is needed to avoid the game splitting at the start screen,
-			// where it temporarily resets the number of stars gained in Team Adventure mode.
-			// This will guarantee the game will only split when it's needed
-			if (current.requiredlaps != 0) {
-				return ((current.stars1 + current.stars2 + current.stars3 + current.stars4 + current.stars5 + current.stars6 + current.stars7) != (old.stars1 + old.stars2 + old.stars3 + old.stars4 + old.stars5 + old.stars6 + old.stars7));
-			}
+			return ((current.stars1 + current.stars2 + current.stars3 + current.stars4 + current.stars5 + current.stars6 + current.stars7) != (old.stars1 + old.stars2 + old.stars3 + old.stars4 + old.stars5 + old.stars6 + old.stars7));
 		}
 	}
 	else

@@ -1,4 +1,4 @@
-# Team Sonic Racer Autosplitter v1.4.2
+# Team Sonic Racing Autosplitter v1.4.2
 This is an autosplitter for the PC Steam release of Team Sonic Racing. It will work with all publicly-released versions of Team Sonic Racing. In case of a new game update, support for it can easily be added.
 Credits to Nimputs for  testing the preliminary versions of the splitter, and thanks to Tyapp for giving me useful info I needed to understand how this game manages a couple of weird stuff in memory.
 ## Behavior

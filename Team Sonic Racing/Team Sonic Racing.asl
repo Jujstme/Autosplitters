@@ -59,7 +59,7 @@ state("GameApp_PcDx11_x64Final", "v1.0")
 	byte abortrace: 0x1026BA8, 0x25C;				// Used when you reset or abort a race
 
 	// These are used in specific scenarios for the last split in Team Adventure mode
-	byte credits: 0x1126B94; 						// Becomes 4 when the credits are rolling
+	byte credits: 0x1126B94; 					// Becomes 4 when the credits are rolling
 	byte skippedcredits: 0x112DF80, 0x0; 				// ID of the message to display on screen. Becomes 8 at the final screen; Used to determine when to split at the end of the run if you skipped the credits
 	byte teamadventuretrack: 0x112B210, 0x11; 			// Internal ID of the selected track for Team Adventure mode
 }
@@ -72,13 +72,13 @@ init
 
 startup
 {
-   vars.totaligt = 0;
-   vars.progressIGT = 0;
-   vars.finalsplit = 0;
-   vars.currentstars = 0;
-   vars.oldstars = 0;
-   vars.frozenigt = 0;
-   refreshRate = 60;
+	vars.totaligt = 0;
+	vars.progressIGT = 0;
+	vars.finalsplit = 0;
+	vars.currentstars = 0;
+	vars.oldstars = 0;
+	vars.frozenigt = 0;
+	refreshRate = 60;
 }
 
 start
@@ -88,20 +88,18 @@ start
 	vars.progressIGT = 0;
 	vars.finalsplit = 0;
 	vars.frozenigt = 0;
-	vars.currentstars = current.stars1 + current.stars2 + current.stars3 + current.stars4 + current.stars5 + current.stars6 + current.stars7;
     
 	// Autostart will be triggered in accordance to speedrun.com rulings
 	// ADVENTURE MODE: as soon as you enter the Team Adventure mode
 	// ALL RACES CATEGORIES: when you confirm your character selection at the first race
 	// As speedrun.com requires Tead Adventure speedruns to run from a clean save file, the timer won't
 	// start if you already have some stars in adventure mode (which means your save file is not new)
-	return((current.gamemode == 1 && current.runstart == 1 && current.racerulings != 19) || (current.teamadventurestart == 1 && vars.currentstars == 0));
+	return((current.gamemode == 1 && current.runstart == 1 && current.racerulings != 19) || (current.teamadventurestart == 1 && current.stars1 == 0));
 }
 
 
 update
 {
-
 	// During a race, the IGT is calculated by the game (not by LiveSplit) and is added to the total
 	if (current.racecompleted == 0)	{
 		vars.progressIGT = (Math.Truncate(100 * current.igt) / 100) + vars.totaligt;
@@ -117,18 +115,19 @@ update
 	
 	// The moment you complete a race, the game picks your total racing time and saves it into a different address
 	// Also, the game truncates the time to the second decimal. We're going to do the same for consistency purposes
-	if(current.racecompleted == 1 && old.racecompleted == 0)
-	{
-		vars.totaligt = (Math.Truncate(100 * current.totalracetime) / 100) + vars.totaligt;
-		vars.progressIGT = vars.totaligt;
-		
-		// IF YOU ARE IN TEAM ADVENTURE AND YOU ARE DOING A SPECIAL CHALLENGE (eg. daredevil, eggpawn assault, etc.) THE ABOVE WON'T WORK
-		// BECAUSE THE GAME LIKES TO USE DIFFERENT ADDRESSES
-		// In order to cope with that, we need this snipped of code
+	if (current.racecompleted == 1 && old.racecompleted == 0) {
+		// IF YOU ARE IN TEAM ADVENTURE AND YOU ARE DOING A SPECIAL CHALLENGE (eg. daredevil, eggpawn assault, etc.)
+		// THE ABOVE WON'T WORK BECAUSE THE GAME LIKES TO USE DIFFERENT ADDRESSES
+		// In order to cope with that, we need this snippet of code
 		if (current.gamemode == 0 && current.requiredlaps == 255) {
 			vars.totaligt = (Math.Truncate(100 * current.totalracetimeadventure) / 100) + vars.totaligt;
-			vars.progressIGT = vars.totaligt;
 		}
+		else
+		// If you're not in one of the above special conditions, the time can be calculated normally
+		{
+			vars.totaligt = (Math.Truncate(100 * current.totalracetime) / 100) + vars.totaligt;
+		}
+		vars.progressIGT = vars.totaligt;
 	}
 }
 
@@ -139,13 +138,13 @@ gameTime
 
 split
 {
-	// If you are in adventure mode, split whenever the game gives you the stars at the end of the event
-	// or, in the case of the final challenge in Thunder Deck, don't split until you reach the end screen (as per speedrun.com rules)
+	// If you are in adventure mode, split whenever the game gives you the stars at the end of the event or, in the 
+	// case of the final challenge in Thunder Deck, don't split until you reach the end screen (as per speedrun.com rules)
 	if (current.gamemode == 0) {
-		//  This is requirement is specific to the final event. It's untested outside the any% category
+		//  This is requirement is specific to the final event. It's untested outside the Any% category
 		if (current.teamadventuretrack == 104) {
 			if (vars.finalsplit == 0 && (current.credits == 4 || current.skippedcredits == 8)) {
-					vars.finalsplit = 1;
+				vars.finalsplit = 1;
 			}
 			if (vars.finalsplit == 1) {
 				vars.finalsplit = 2;

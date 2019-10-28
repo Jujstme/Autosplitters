@@ -1,4 +1,4 @@
-# Sonic & All-Star Racinng Transformed
+# Sonic & All-Stars Racing Transformed
 
 ## Autosplitter
 This autosplitter works on the PC Steam release of S&ASRT.

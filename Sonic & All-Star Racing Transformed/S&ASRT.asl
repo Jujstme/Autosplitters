@@ -98,6 +98,8 @@ startup
    vars.totaligt = 0;
    vars.progressIGT = 0;
    // refreshRate = 60;
+   settings.Add("GPsplit", false, "ALL - CUPS: Only split at the end of each GP");
+   settings.SetToolTip("GPsplit", "If enabled, LiveSplit will trigger a split only at the end of each Grand Prix.\nIf disabled, LiveSplit will trigger a split at the end of each race.\n\nDefault: disabled");
 }
 
 start
@@ -105,6 +107,7 @@ start
    // Reset the IGT variables if you reset a run
    vars.totaligt = 0;
    vars.progressIGT = 0;
+   vars.racecount = 0;
    
 	if (current.modeselect == 0)
 	{
@@ -183,7 +186,20 @@ split
 	}
 	else if (current.modeselect == 1)
 	{
-		return (current.racecompleted == 1 && old.racecompleted == 0);
+		if (settings["GPsplit"]) {
+			if (current.racecompleted == 1 && old.racecompleted == 0)
+			{
+				++vars.racecount;
+				if (vars.racecount == 4) {
+					vars.racecount = 0;
+					return (true);
+				}
+			}
+		}
+		else
+		{
+			return (current.racecompleted == 1 && old.racecompleted == 0);
+		}
 	}
 }
 

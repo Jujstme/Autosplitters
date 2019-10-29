@@ -7,7 +7,8 @@ The script fully supports all speedrun categories, although it's still untested 
 ## Behavior
 * The timer will automatically start when you confirm your character selection at the first track for both All-Cups and World Tour categories
 * In GP mode, splits are triggered as soon as you cross the finish line at the end of each track
-* In World Tour, splits are triggered whenever you succesfully complete an event and gains stars for doing so. Failing an event will not trigger a split
+* In World Tour, splits are triggered whenever you succesfully complete an event and gains stars for doing so. Failing an event will not trigger a split.
+* Completing Race of Ages in Moonlight Park / Superstar Showdown will not trigger a split until you get to the credits screen, as those 2 events represent the last event of the Any%/100% category. When you have to re-do Race of Ages in Twilight Park in order to get the 4th star after unlocking S-class, LiveSplit will split correctly
 * The in-game timer is grabbed from the game directly. Due to how the game behaves when showing the total time for a race, there might be a 1 or 2 ms difference between the time shown by LiveSplit and the time displayed by the game. The time displayed by LiveSplit is more accurate anyway :)
 
 ## Note

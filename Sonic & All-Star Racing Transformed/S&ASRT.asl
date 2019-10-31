@@ -11,6 +11,7 @@ state("ASN_App_PcDx9_Final")
 	byte requiredlaps: 0x7CE920, 0x0, 0xC1B8, 0x4;		// Usually 3 in all races. Becomes 255 in events where the lap count is irrelevant
 	byte racestatus: 0x7CE944;							// 0 idle; 1 stage intro; 4 racing; 5 race ended
 	byte racecompleted: 0x7CE930;						// becomes 1 when a race or an event ends, regardless of anything
+	byte gpmodetrack: 0x7D6AC8;				// identifier for the track number in GP mode. Starts from 0 and increases each time you complete a race, until 4
 	float igt : 0x7CE980;								// starts at the start of every race amd stops at the results screen
 	float totalracetime : 0x7CE920, 0x0, 0xC1B8, 0x28;	// updates itself each time you complete a lap (final lap included)
 
@@ -107,7 +108,6 @@ start
    // Reset the IGT variables if you reset a run
    vars.totaligt = 0;
    vars.progressIGT = 0;
-   vars.racecount = 0;
    
 	if (current.modeselect == 0)
 	{
@@ -187,14 +187,7 @@ split
 	else if (current.modeselect == 1)
 	{
 		if (settings["GPsplit"]) {
-			if (current.racecompleted == 1 && old.racecompleted == 0)
-			{
-				++vars.racecount;
-				if (vars.racecount == 4) {
-					vars.racecount = 0;
-					return (true);
-				}
-			}
+			return (current.gpmodetrack == 3 && current.racecompleted == 1 && old.racecompleted == 0);
 		}
 		else
 		{
@@ -205,5 +198,5 @@ split
 
 isLoading
 {
-	return true ;
+	return true;
 }

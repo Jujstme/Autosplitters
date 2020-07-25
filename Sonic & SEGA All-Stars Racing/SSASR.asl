@@ -15,6 +15,7 @@ state("Sonic & SEGA All-Stars Racing")
 	byte runSplit: 0x8F7A6C;				// Self-explanatory
 	uint globalFrameCountAtGo: 0x8F7A80;	// Internal 50hz IGT. Needed in mission mode
 	byte currentLap: 0x8F7A68, 0x74;		// Reports which lap you're currently into
+	byte requiredLaps: 0x8F7A68, 0x84;
 	uint lap0: 0x8F7A68, 0x6C, 0x0;			// Internal timer for lap 0 (before you cross the start line)
 	uint lap1: 0x8F7A68, 0x6C, 0x4;			// Internal timer for lap 1
 	uint lap2: 0x8F7A68, 0x6C, 0x8;			// Internal timer for lap 2
@@ -32,7 +33,6 @@ startup
    settings.SetToolTip("AAArankSplit", "If enabled, LiveSplit will trigger a split for All Mission categories only when you get a AAA rank.\nIf disabled, LiveSplit will trigger a split when you complete a mission successfully, regardless of the rank.\nYou need to enable this options if you wish to run the \"AAA\" subcategory of All Missions run.\n\nDefault: disabled");
    settings.Add("GPsplit", false, "All Cups: split only at the final race of each cup");
    settings.SetToolTip("GPsplit", "If enabled, LiveSplit will trigger a split for All Cups runs when you complete a cup.\nIf disabled, LiveSplit will trigger a split at the completion of each race.\n\nDefault: disabled");
-
 }
 
 start
@@ -89,16 +89,34 @@ update
 		// In in a normal race within mission mode, the standard timing system will be used
 		// The only difference is mission mode races have 2 laps instead of 3
 		if (current.missionEvent == 10) {
-			if (current.currentLap < 3) {
-				if (current.currentLap == 0) {
-					vars.racetime = current.lap0;
-				} else if (current.currentLap == 1) {
-					vars.racetime = current.totalLap + current.lap1;
-				} else if (current.currentLap == 2) {
-					vars.racetime = current.totalLap + current.lap2;
+			if (current.requiredLaps == 3) {
+				if (current.currentLap < 3) {
+					if (current.currentLap == 0) {
+						vars.racetime = current.lap0;
+					} else if (current.currentLap == 1) {
+						vars.racetime = current.totalLap + current.lap1;
+					} else if (current.currentLap == 2) {
+						vars.racetime = current.totalLap + current.lap2;
+					}
+				} else if (current.currentLap == 3) {
+					vars.racetime = current.totalLap;
 				}
-			} else if (current.currentLap == 3) {
-				vars.racetime = current.totalLap;
+			} else if (current.requiredLaps == 4) {
+			// Mission mode usually has only 2 laps per track. However, Mission 52 (Bonanza Blast!) has 3.
+			// This code below is the same used in GP mode but fixes the timer for that event.
+					if (current.currentLap < 4) {
+						if (current.currentLap == 0) {
+							vars.racetime = current.lap0;
+						} else if (current.currentLap == 1) {
+							vars.racetime = current.totalLap + current.lap1;
+						} else if (current.currentLap == 2) {
+							vars.racetime = current.totalLap + current.lap2;
+						} else if (current.currentLap == 3) {
+							vars.racetime = current.totalLap + current.lap3;
+						}
+					} else if (current.currentLap == 4) {
+						vars.racetime = current.totalLap;
+					}
 			}
 			vars.racetime = (Math.Truncate((1000 * ((double)vars.racetime/204800))) / 1000);
 	

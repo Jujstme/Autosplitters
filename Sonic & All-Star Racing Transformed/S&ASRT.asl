@@ -101,6 +101,24 @@ startup
    // refreshRate = 60;
    settings.Add("GPsplit", false, "ALL - CUPS: Only split at the end of each GP");
    settings.SetToolTip("GPsplit", "If enabled, LiveSplit will trigger a split only at the end of each Grand Prix.\nIf disabled, LiveSplit will trigger a split at the end of each race.\n\nDefault: disabled");
+
+  // Check if you're using RTA timing in LiveSplit and will eventually offer you to switch to GameTime
+  if (timer.CurrentTimingMethod == TimingMethod.RealTime) {
+    var timingMessage = MessageBox.Show (
+    "This game uses Time without Loads (Game Time) as the main timing method\n"+
+    "for All Cups speedrun categories on speedrun.com.\n"+
+    "LiveSplit is currently set to show Real Time (RTA).\n"+
+    "Would you like to set the timing method to Game Time?",
+    "Sonic & All-Star Racing Transformed | LiveSplit",
+    MessageBoxButtons.YesNo,MessageBoxIcon.Question);
+    if (timingMessage == DialogResult.Yes) {
+      timer.CurrentTimingMethod = TimingMethod.GameTime;
+      MessageBox.Show("Timing method has been set to GameTime!", "Sonic & All-Star Racing Transformed | LiveSplit", MessageBoxButtons.OK, MessageBoxIcon.Information);
+    } else if (timingMessage == DialogResult.No) {
+      timer.CurrentTimingMethod = TimingMethod.RealTime;
+      MessageBox.Show("Timing method has been set to Real Time (RTA)!", "Sonic & All-Star Racing Transformed | LiveSplit", MessageBoxButtons.OK, MessageBoxIcon.Information);
+    }
+  }
 }
 
 start

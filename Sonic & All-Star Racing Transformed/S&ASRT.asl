@@ -105,7 +105,7 @@ startup
   // Check if you're using RTA timing in LiveSplit and will eventually offer you to switch to GameTime
   if (timer.CurrentTimingMethod == TimingMethod.RealTime) {
     var timingMessage = MessageBox.Show (
-    "This game uses Time without Loads (Game Time) as the main timing method\n"+
+    "This game uses Time without Loads (Game Time) as the main timing method"+
     "for All Cups speedrun categories on speedrun.com.\n"+
     "LiveSplit is currently set to show Real Time (RTA).\n"+
     "Would you like to set the timing method to Game Time?",

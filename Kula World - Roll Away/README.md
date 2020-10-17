@@ -10,7 +10,7 @@ The script supports all the three main versions of the game (PAL, NTSC and NTSC-
 * Retroarch (using Beetle PSX core) - both 32 and 64 bit
 * Retroarch (using Beetle PSX HW core) - both 32 and 64 bit
 * Retroarch (using PCSX_Rearmed core) - both 32 and 64 bit
-* Retroatch (using Duckstation**\*** core) - both 32 and 64 bit
+* Retroatch (using Duckstation core \[[**SEE NOTE BELOW**]\]) - both 32 and 64 bit
 * ePSXe v2.0.5
 * ePSXe v2.0.2-1
 * ePSXe v2.0.0

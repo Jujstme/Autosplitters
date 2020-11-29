@@ -1,11 +1,11 @@
 // IGT timer autosplitter for Hot Shot Racing
 // Coding: Jujstme
-// Version: 1.1
+// Version: 1.2
 // In case of bugs, please contact me at just.tribe@gmail.com
 
 state("HotshotRacing", "v1.0")
 {
-  float runstart: 0x12F5F40, 0x2A8;				// For other modes. Becomes 1 when you confirm the character selection
+  float runstart: 0x12F5F40, 0x2A8;
   byte racestatus: 0x12F5EEC;					// 0 idle; 1 stage intro: 3 countdown; 4 racing; 5 results screen
   byte racecompleted: 0x12F631C;				// becomes 1 when completing a race, becomes 3 in case of TimeOut
   float igt: 0x12F5F10, 0x4;					// starts at the start of every race and stops at the results screen
@@ -15,12 +15,22 @@ state("HotshotRacing", "v1.0")
 
 state("HotshotRacing", "v1.1")
 {
-  float runstart: 0x12F8FE8, 0x2A8;				// For other modes. Becomes 1 when you confirm the character selection
+  float runstart: 0x12F8FE8, 0x2A8;
   byte racestatus: 0x12F8F94;					// 0 idle; 1 stage intro: 3 countdown; 4 racing; 5 results screen
   byte racecompleted: 0x12F931C;				// becomes 1 when completing a race, becomes 3 in case of TimeOut
   float igt: 0x12F8FB8, 0x4;					// starts at the start of every race and stops at the results screen
   float totalracetime: 0x12F8F60, 0x0, 0xAF8, 0x0, 0xE8, 0x34;	// updates itself each time you complete a lap (final lap included)
   byte trackorder: 0x12FA138;					// Becomes 4 at the end of a GP
+}
+
+state("HotshotRacing", "v1.2 (BOSS LEVEL DLC)")
+{
+  float runstart: 0x1317D18, 0x2A8;
+  byte racestatus: 0x1317CAC;					// 0 idle; 1 stage intro: 3 countdown; 4 racing; 5 results screen
+  byte racecompleted: 0x1317F0C;				// becomes 1 when completing a race, becomes 3 in case of TimeOut
+  float igt: 0x1317CD0, 0x4;					// starts at the start of every race and stops at the results screen
+  float totalracetime: 0x1317C80, 0x0, 0xE8, 0x34;		// updates itself each time you complete a lap (final lap included)
+  byte trackorder: 0x13191C8;					// Becomes 4 at the end of a GP
 }
 
 init
@@ -29,6 +39,8 @@ init
     version = "v1.0";
   } else if (modules.First().ModuleMemorySize == 0x144F000) {
     version = "v1.1";
+  } else if (modules.First().ModuleMemorySize == 0x146D000) {
+    version = "v1.2 (BOSS LEVEL DLC)";
   } else {
     version = "unsupported";
     MessageBox.Show("This game version is currently not supported. Autosplitting and in-game timer calculation will be disabled.", "LiveSplit Auto Splitter - Unsupported Game Version");

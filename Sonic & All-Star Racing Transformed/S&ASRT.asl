@@ -98,7 +98,7 @@ startup
 {
    vars.totaligt = 0;
    vars.progressIGT = 0;
-   // refreshRate = 60;
+   refreshRate = 60;
    settings.Add("GPsplit", false, "ALL - CUPS: Only split at the end of each GP");
    settings.SetToolTip("GPsplit", "If enabled, LiveSplit will trigger a split only at the end of each Grand Prix.\nIf disabled, LiveSplit will trigger a split at the end of each race.\n\nDefault: disabled");
 

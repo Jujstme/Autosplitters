@@ -130,7 +130,7 @@ start
 	{
 		if (current.coastalcruise + current.canyoncarnage == 0) return (current.runstart == 1 && current.runstart2 == 1 && old.runstart == 0);
 	}
-	else if (current.modeselect == 1)
+	else if (current.modeselect == 1 || current.modeselect == 3)
 	{
 		return (current.runstart == 1 && current.runstart2 == 1 && old.runstart == 0);
 	}
@@ -210,6 +210,10 @@ split
 		{
 			return (current.racecompleted == 1 && old.racecompleted == 0);
 		}
+	}
+	else if (current.modeselect == 3)
+	{
+		return (current.racecompleted == 1 && old.racecompleted == 0);
 	}
 }
 

@@ -11,7 +11,7 @@ state("MassEffect2", "ME2 2.0.0.48602")
 
 state("MassEffect3", "ME3 2.0.0.48602")
 {
-	bool isLoading : 0x179AF10; // up to 7 while loading
+	bool isLoading : 0x179AF10; // up to 2 while loading
 }
 
 init

@@ -4,9 +4,7 @@ state("MassEffect3") {}
 
 init
 {
-    refreshRate = 60;
     int trilogy = 0;
-
     if (game.Is64Bit())
     {
       switch (memory.ProcessName)
@@ -26,6 +24,10 @@ init
 	  }
     }
 	
+	vars.trilogy = trilogy;
+	vars.isNotLoading = null;
+	vars.isLoading = null;
+	
     var page = modules.First();
     var scanner = new SignatureScanner(game, page.BaseAddress, page.ModuleMemorySize);
     IntPtr ptr = IntPtr.Zero;
@@ -35,18 +37,29 @@ init
     {
       // Signature scanning for Mass Effect 1
       case 1 :
-        ptr = scanner.Scan(new SigScanTarget(11,
-            "85 C9",             // test ecx,ecx
-            "74 0B",             // je MassEffect1.exe+326F85
-            "3B D0",             // cmp edx,eax
-            "0F 4F C2",          // cmovg eax,edx
-            "89 05 ????????",    // mov [MassEffect1.exe+178D1C],eax  <----
-            "C3"                 // ret
+        ptr = scanner.Scan(new SigScanTarget(7,
+            "85 C0",             // test eax,eax
+            "0F45 CA",           // cmovne ecx,edx
+            "39 1D ????????",    // cmp [MassEffect1.exe+16516B0],ebx  <----
+            "0F44 CB"            // cmove ecx,ebx
         ));
         if (ptr == IntPtr.Zero) {
           throw new Exception("Could not find address!");
         }
         relativePosition = (int)((long)ptr - (long)page.BaseAddress) + 4;
+        vars.isNotLoading = new MemoryWatcher<bool>(new DeepPointer(
+          relativePosition + game.ReadValue<int>(ptr)
+        ));
+		
+        ptr = scanner.Scan(new SigScanTarget(2,
+            "83 3D ???????? 00",  // cmp dword ptr [MassEffect1.exe+17775B8],00  <----
+            "74 20",              // je MassEffect1.exe+2596F1
+            "48 8B 03"            // mov rax,[rbx]
+        ));
+        if (ptr == IntPtr.Zero) {
+          throw new Exception("Could not find address!");
+        }
+        relativePosition = (int)((long)ptr - (long)page.BaseAddress) + 5;
         vars.isLoading = new MemoryWatcher<bool>(new DeepPointer(
           relativePosition + game.ReadValue<int>(ptr)
         ));
@@ -95,12 +108,20 @@ init
 
 update
 {
-    if (vars.isLoading != null) {
+    if (vars.isNotLoading != null) {
+      vars.isNotLoading.Update(game);
+    }
+	if (vars.isLoading != null) {
       vars.isLoading.Update(game);
     }
 }
 
 isLoading
 {
-    return (vars.isLoading.Current);
+    if (vars.trilogy == 1) {
+	    return (vars.isLoading.Current || !vars.isNotLoading.Current);
+	} else if (vars.trilogy == 2 || vars.trilogy == 3) {
+	  return (vars.isLoading.Current);
+	}
+
 }

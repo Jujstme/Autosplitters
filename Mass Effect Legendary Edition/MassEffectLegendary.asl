@@ -71,14 +71,23 @@ init
         ));
         break;
 	
-      // I couldn't find a target for signature scan on Mass Effect 3.
-      // For now I am pointing to the address directly.
+      // Largely untested target for signature scan on Mass Effect 3.
       // This might break functionality in case the game gets updated
-      // as it will require the script to be updated as well.
+      // as it might require the script to be updated as well.
       // Tested working on ME3 exe version 2.0.0.48602
       case 3 :
+        ptr = scanner.Scan(new SigScanTarget(12,
+	    "66 0F1F 84 00 00000000",    // word ptr [rax+rax+00000000]
+            "48 8B 05 ????????",         // mov rax,[MassEffect3.exe+18B41B0]  <----
+            "48 8B 1C 06",               // mov rbx,[rsi+rax]
+            "48 8B 03"                   // mov rax,[rbx]
+    	));
+        if (ptr == IntPtr.Zero) {
+          throw new Exception("Could not find address!");
+        }
+        relativePosition = (int)((long)ptr - (long)page.BaseAddress) + 4;
         vars.isLoading = new MemoryWatcher<bool>(new DeepPointer(
-          page.BaseAddress + 0x179AF10
+          relativePosition + game.ReadValue<int>(ptr), 0x0, 0xA0
         ));
         break;
     }

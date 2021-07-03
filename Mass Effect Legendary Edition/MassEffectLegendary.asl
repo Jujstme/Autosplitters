@@ -23,6 +23,22 @@ init
       }
     }
 
+  if (timer.CurrentTimingMethod == TimingMethod.RealTime) {
+    var timingMessage = MessageBox.Show (
+    "This game uses Time without Loads (Game Time) as the main timing method on speedrun.com.\n"+
+    "LiveSplit is currently set to show Real Time (RTA).\n\n"+
+    "Would you like to set the timing method to Game Time?",
+    "Mass Effect Legendary Edition | LiveSplit",
+    MessageBoxButtons.YesNo,MessageBoxIcon.Question);
+    if (timingMessage == DialogResult.Yes) {
+      timer.CurrentTimingMethod = TimingMethod.GameTime;
+      MessageBox.Show("Timing method has been set to GameTime!", "Mass Effect Legendary Edition | LiveSplit", MessageBoxButtons.OK, MessageBoxIcon.Information);
+    } else if (timingMessage == DialogResult.No) {
+      timer.CurrentTimingMethod = TimingMethod.RealTime;
+      MessageBox.Show("Timing method will stay set to Real Time (RTA).", "Mass Effect Legendary Edition | LiveSplit", MessageBoxButtons.OK, MessageBoxIcon.Information);
+    }
+  }
+    
     var page = modules.First();
     var scanner = new SignatureScanner(game, page.BaseAddress, page.ModuleMemorySize);
 	

@@ -23,25 +23,9 @@ init
       }
     }
 
-  if (timer.CurrentTimingMethod == TimingMethod.RealTime) {
-    var timingMessage = MessageBox.Show (
-    "This game uses Time without Loads (Game Time) as the main timing method on speedrun.com.\n"+
-    "LiveSplit is currently set to show Real Time (RTA).\n\n"+
-    "Would you like to set the timing method to Game Time?",
-    "Mass Effect Legendary Edition | LiveSplit",
-    MessageBoxButtons.YesNo,MessageBoxIcon.Question);
-    if (timingMessage == DialogResult.Yes) {
-      timer.CurrentTimingMethod = TimingMethod.GameTime;
-      MessageBox.Show("Timing method has been set to GameTime!", "Mass Effect Legendary Edition | LiveSplit", MessageBoxButtons.OK, MessageBoxIcon.Information);
-    } else if (timingMessage == DialogResult.No) {
-      timer.CurrentTimingMethod = TimingMethod.RealTime;
-      MessageBox.Show("Timing method will stay set to Real Time (RTA).", "Mass Effect Legendary Edition | LiveSplit", MessageBoxButtons.OK, MessageBoxIcon.Information);
-    }
-  }
-    
     var page = modules.First();
     var scanner = new SignatureScanner(game, page.BaseAddress, page.ModuleMemorySize);
-	
+
     IntPtr ptr = scanner.Scan(new SigScanTarget(4,
         "75 18",             // jne MassEffect1.exe+310FD6           // jne MassEffect2+475742               // jne MassEffect3.exe+480D12
         "8B 0D ????????",    // mov ecx,[MassEffect1.exe+16516B0]    // mov ecx,[MassEffect2.exe+16232F0]    // mov ecx,[MassEffect3.exe+1767AA0]  <----
@@ -71,6 +55,25 @@ init
           relativePosition + game.ReadValue<int>(ptr)
         ));
     }
+}
+
+startup
+{
+  if (timer.CurrentTimingMethod == TimingMethod.RealTime) {
+    var timingMessage = MessageBox.Show (
+    "This game uses Time without Loads (Game Time) as the main timing method on speedrun.com.\n"+
+    "LiveSplit is currently set to show Real Time (RTA).\n\n"+
+    "Would you like to set the timing method to Game Time?",
+    "Mass Effect Legendary Edition | LiveSplit",
+    MessageBoxButtons.YesNo,MessageBoxIcon.Question);
+    if (timingMessage == DialogResult.Yes) {
+      timer.CurrentTimingMethod = TimingMethod.GameTime;
+      MessageBox.Show("Timing method has been set to GameTime!", "Mass Effect Legendary Edition | LiveSplit", MessageBoxButtons.OK, MessageBoxIcon.Information);
+    } else if (timingMessage == DialogResult.No) {
+      timer.CurrentTimingMethod = TimingMethod.RealTime;
+      MessageBox.Show("Timing method will stay set to Real Time (RTA).", "Mass Effect Legendary Edition | LiveSplit", MessageBoxButtons.OK, MessageBoxIcon.Information);
+    }
+  }
 }
 
 update

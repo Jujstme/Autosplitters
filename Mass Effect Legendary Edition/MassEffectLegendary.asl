@@ -57,6 +57,63 @@ init
     }
 
 
+    // Mass Effect 2 plot bools for automatic splitting
+    if (vars.trilogy == 2) {
+        ptr = scanner.Scan(new SigScanTarget(8,
+            "48 85 C0",          // test rax,rax
+            "74 42",             // je MassEffect2.exe+6DAA15
+            "4C 8B 05 ????????"  // mov r8,[MassEffect2.exe+1B675B0]  <----
+        ));
+        if (ptr == IntPtr.Zero) {
+          throw new Exception("Could not find address!");
+        }
+        relativePosition = (int)((long)ptr - (long)page.BaseAddress) + 4;	
+        vars.watchers = new MemoryWatcherList();
+
+        // Main story progression
+        vars.watchers.Add(new MemoryWatcher<byte>(new DeepPointer(relativePosition + game.ReadValue<int>(ptr), 0x16C, 0xA34, 0x60, 0x14A)) { Name = "plotPrologue" }); // Used for prologue mission
+        vars.watchers.Add(new MemoryWatcher<byte>(new DeepPointer(relativePosition + game.ReadValue<int>(ptr), 0x16C, 0xA34, 0x60, 0x43)) { Name = "plotCR0" });
+        vars.watchers.Add(new MemoryWatcher<byte>(new DeepPointer(relativePosition + game.ReadValue<int>(ptr), 0x16C, 0xA34, 0x60, 0x27)) { Name = "plotCR123" });
+        vars.watchers.Add(new MemoryWatcher<byte>(new DeepPointer(relativePosition + game.ReadValue<int>(ptr), 0x16C, 0xA34, 0x60, 0xB3)) { Name = "plotIFF" });
+        vars.watchers.Add(new MemoryWatcher<byte>(new DeepPointer(relativePosition + game.ReadValue<int>(ptr), 0x16C, 0xA34, 0x60, 0x12E)) { Name = "crewAbduct" });
+        vars.watchers.Add(new MemoryWatcher<byte>(new DeepPointer(relativePosition + game.ReadValue<int>(ptr), 0x16C, 0xA34, 0x60, 0xFE)) { Name = "suicideOculus" });
+        vars.watchers.Add(new MemoryWatcher<byte>(new DeepPointer(relativePosition + game.ReadValue<int>(ptr), 0x16C, 0xA34, 0x60, 0x16F)) { Name = "suicideValve" });
+        vars.watchers.Add(new MemoryWatcher<byte>(new DeepPointer(relativePosition + game.ReadValue<int>(ptr), 0x16C, 0xA34, 0x60, 0x170)) { Name = "suicideBubble" });
+        vars.watchers.Add(new MemoryWatcher<byte>(new DeepPointer(relativePosition + game.ReadValue<int>(ptr), 0x16C, 0xA34, 0x60, 0x1BC)) { Name = "suicideReaper" });
+
+        // Mission tracking
+        vars.watchers.Add(new MemoryWatcher<byte>(new DeepPointer(relativePosition + game.ReadValue<int>(ptr) - 0x1B0 , 0xE8, 0x8, 0x68, 0x14, 0x70, 0x5C)) { Name = "missionTracking" });    // MIGHT BREAK
+
+        // Dossiers
+        vars.watchers.Add(new MemoryWatcher<byte>(new DeepPointer(relativePosition + game.ReadValue<int>(ptr), 0x16C, 0xA34, 0x60, 0x278)) { Name = "crewAcq1" }); // For Mordin, Jack, Garrus, Tali
+        vars.watchers.Add(new MemoryWatcher<byte>(new DeepPointer(relativePosition + game.ReadValue<int>(ptr), 0x16C, 0xA34, 0x60, 0x4D)) { Name = "crewAcq2" }); // For Grunt
+        vars.watchers.Add(new MemoryWatcher<byte>(new DeepPointer(relativePosition + game.ReadValue<int>(ptr), 0x16C, 0xA34, 0x60, 0x279)) { Name = "crewAcq3" }); // For Thane
+        vars.watchers.Add(new MemoryWatcher<byte>(new DeepPointer(relativePosition + game.ReadValue<int>(ptr), 0x16C, 0xA34, 0x60, 0x47)) { Name = "crewAcq4" }); // For Samara
+        vars.watchers.Add(new MemoryWatcher<byte>(new DeepPointer(relativePosition + game.ReadValue<int>(ptr), 0x16C, 0xA34, 0x60, 0x32)) { Name = "crewAcq5" }); // For Zaeed
+        vars.watchers.Add(new MemoryWatcher<byte>(new DeepPointer(relativePosition + game.ReadValue<int>(ptr), 0x16C, 0xA34, 0x60, 0xB9)) { Name = "crewAcq6" }); // For Kasumi
+
+        // Data for loyalty missions and loyalty status for each squadmate
+        vars.watchers.Add(new MemoryWatcher<byte>(new DeepPointer(relativePosition + game.ReadValue<int>(ptr), 0x16C, 0xA34, 0x60, 0x16)) { Name = "loyaltyStatus1" });
+        vars.watchers.Add(new MemoryWatcher<byte>(new DeepPointer(relativePosition + game.ReadValue<int>(ptr), 0x16C, 0xA34, 0x60, 0x17)) { Name = "loyaltyStatus2" });
+        vars.watchers.Add(new MemoryWatcher<byte>(new DeepPointer(relativePosition + game.ReadValue<int>(ptr), 0x16C, 0xA34, 0x60, 0x18)) { Name = "loyaltyStatus3" });
+        vars.watchers.Add(new MemoryWatcher<byte>(new DeepPointer(relativePosition + game.ReadValue<int>(ptr), 0x16C, 0xA34, 0x60, 0xBB)) { Name = "loyaltyMissions1" });
+        vars.watchers.Add(new MemoryWatcher<byte>(new DeepPointer(relativePosition + game.ReadValue<int>(ptr), 0x16C, 0xA34, 0x60, 0xBC)) { Name = "loyaltyMissions2" });
+
+        ptr = scanner.Scan(new SigScanTarget(3,
+            "48 8B 0D ????????",    // mov rcx,[MassEffect2.exe+1760010]
+            "48 8B 0C F9",          // mov rcx,[rcx+rdi*8]
+            "E8 FFC0E6FF"           // call MassEffect2.exe+404600
+        ));
+        if (ptr == IntPtr.Zero) {
+          throw new Exception("Could not find address!");
+        }
+        relativePosition = (int)((long)ptr - (long)page.BaseAddress) + 4;
+        vars.watchers.Add(new MemoryWatcher<uint>(new DeepPointer(relativePosition + game.ReadValue<int>(ptr), 0x0, 0x40, 0x118)) { Name = "XPOS" });
+        vars.watchers.Add(new MemoryWatcher<uint>(new DeepPointer(relativePosition + game.ReadValue<int>(ptr), 0x0, 0x40, 0x11C)) { Name = "YPOS" });
+        vars.watchers.Add(new MemoryWatcher<uint>(new DeepPointer(relativePosition + game.ReadValue<int>(ptr), 0x0, 0x40, 0x120)) { Name = "ZPOS" });
+    }
+
+
     // Mass Effect 3 Journal entries for automatic splitting
     if (vars.trilogy == 3) {
         ptr = scanner.Scan(new SigScanTarget(7,
@@ -128,6 +185,45 @@ startup
     }
   }
 
+    // Mass Effect 2 autosplitting settings
+    settings.Add("ME2", true, "Mass Effect 2 - Autosplitting");
+    settings.Add("escapeLazarus", true, "Prologue: Awakening", "ME2");
+    settings.Add("freedomProgress", true, "Freedom's Progress", "ME2");
+    settings.Add("recruitMordin", true, "Dossier: The Professor", "ME2");
+    settings.Add("recruitGarrus", true, "Dossier: Archangel", "ME2");
+    settings.Add("recruitJack", true, "Dossier: The Convict", "ME2");
+    settings.Add("acquireGrunt", true, "Dossier: The Warlord", "ME2");
+    settings.Add("horizonCompleted", true, "Horizon", "ME2");
+    settings.Add("ME2MissionsBeforeCollectorShip", true, "Missions splitting before unlocking Collector Ship", "ME2");
+//  settings.Add("ME2OptionalDossiers", true, "Optional Dossiers", "ME2");
+//  settings.Add("recruitThane", true, "Dossier: The Assassin", "ME2OptionalDossiers");
+//  settings.Add("recruitSamara", true, "Dossier: The Justicar", "ME2OptionalDossiers");
+//  settings.Add("recruitTali", true, "Dossier: Tali", "ME2OptionalDossiers");
+    settings.Add("collectorShip", true, "Collector ship", "ME2");
+    settings.Add("reaperIFF", true, "Reaper IFF", "ME2");
+    settings.Add("ME2MissionsBeforeCrewAbduction", true, "Missions splitting before automatic crew abduction event", "ME2");
+    settings.Add("crewAbuct", true, "Joker: Crew Abduction", "ME2");
+    settings.Add("ME2SuocideMission", true, "Suicide Mission", "ME2");
+    settings.Add("ME2Oculus", true, "Oculus", "ME2SuocideMission");
+    settings.Add("ME2Valve", true, "Valve", "ME2SuocideMission");
+    settings.Add("ME2Bubble", true, "Bubble", "ME2SuocideMission");
+    settings.Add("ME2ending", true, "Human Reaper", "ME2SuocideMission");
+    settings.Add("DLCcharactersRectuitment", false, "DLC Characters rectuitment", "ME2");
+    settings.Add("recruitKasumi", true, "Dossier: The Master Thief", "DLCcharactersRectuitment");
+    settings.Add("recruitZaeed", true, "Dossier: The Veteran", "DLCcharactersRectuitment");
+//  settings.Add("ME2LoyaltyMissions", true, "Loyalty Missions", "ME2");
+//  settings.Add("loyaltyMiranda", true, "Miranda", "ME2LoyaltyMissions");
+//  settings.Add("loyaltyJacob", true, "Jacob", "ME2LoyaltyMissions");
+//  settings.Add("loyaltyJack", true, "Jack", "ME2LoyaltyMissions");
+//  settings.Add("loyaltyLegion", true, "Legion", "ME2LoyaltyMissions");
+//  settings.Add("loyaltyKasumi", true, "Kasumi", "ME2LoyaltyMissions");
+//  settings.Add("loyaltyGarrus", true, "Garrus", "ME2LoyaltyMissions");
+//  settings.Add("loyaltyThane", true, "Thane", "ME2LoyaltyMissions");
+//  settings.Add("loyaltyTali", true, "Tali", "ME2LoyaltyMissions");
+//  settings.Add("loyaltyMordin", true, "Mordin", "ME2LoyaltyMissions");
+//  settings.Add("loyaltyGrunt", true, "Grunt", "ME2LoyaltyMissions");
+//  settings.Add("loyaltySamara", true, "Samara", "ME2LoyaltyMissions");
+//  settings.Add("loyaltyZaeed", true, "Zaeed", "ME2LoyaltyMissions");
 
   // Mass Effect 3 autosplitting settings
   settings.Add("ME3", true, "Mass Effect 3 - Autosplitting");
@@ -160,15 +256,74 @@ update
       vars.isLoading.Update(game);
     }
 
-    if (vars.trilogy == 1) {
-      if (vars.isLoading2 != null) {
-        vars.isLoading2.Update(game);
-      }
+  if (vars.trilogy == 1) {
+    if (vars.isLoading2 != null) {
+      vars.isLoading2.Update(game);
     }
-	
-    if (vars.trilogy == 3) {
-      vars.watchers.UpdateAll(game);
-    }
+  } else if (vars.trilogy == 2) {
+    vars.watchers.UpdateAll(game);
+
+    // Main story progression missions
+    current.LazarusCompleted = (vars.watchers["plotPrologue"].Current & (1 << 5)) != 0 && (vars.watchers["plotCR0"].Current & (1 << 1)) == 0 && (vars.watchers["plotCR0"].Old & (1 << 1)) == 0; // Assumes Lazarus completed when the variable for Jack conversation ("TimeHasPassed") flips to 1 before you completed Freedom Progress.
+    current.FreedomProgressCompleted = (vars.watchers["plotCR0"].Current & (1 << 1)) != 0;
+    current.horizonCompleted = (vars.watchers["plotCR123"].Current & (1 << 0)) != 0;
+    current.collectorShipCompleted = (vars.watchers["plotCR123"].Current & (1 << 1)) != 0;
+    current.reaperIFFcompleted = (vars.watchers["plotIFF"].Current & (1 << 3)) != 0;
+    current.crewAbductMissionComplete = (vars.watchers["crewAbduct"].Current & (1 << 1)) != 0;
+
+    // Missions between Horizon and Collector ship
+    // Missions between IFF and Joker
+    current.missionTracking = vars.watchers["missionTracking"].Current;
+
+    // Suicide mission
+    current.suicideOculusDestroyed = (vars.watchers["suicideOculus"].Current & (1 << 4)) != 0;
+    current.suicideValveCompleted = (vars.watchers["suicideValve"].Current & (1 << 5)) != 0;
+    current.suicideBubbleCompleted = (vars.watchers["suicideBubble"].Current & (1 << 0)) != 0;
+    current.suicideMissonCompleted = (vars.watchers["suicideReaper"].Current & (1 << 3)) != 0 || (vars.watchers["suicideReaper"].Current & (1 << 5)) != 0 || (vars.watchers["suicideReaper"].Current & (1 << 6)) != 0;
+
+    // Recruitment missions Phase 1
+    current.MordinRecruited = (vars.watchers["crewAcq1"].Current & (1 << 6)) != 0;
+    current.GarrusRecruited = (vars.watchers["crewAcq1"].Current & (1 << 5)) != 0;
+    current.JackRecruited = (vars.watchers["crewAcq1"].Current & (1 << 3)) != 0;
+    current.GruntTankRecovered = (vars.watchers["crewAcq2"].Current & (1 << 2)) != 0;
+    // Recruitment missions Phase 2
+    current.TaliRecruited = (vars.watchers["crewAcq1"].Current & (1 << 7)) != 0;
+    current.ThaneRecruited = (vars.watchers["crewAcq3"].Current & (1 << 1)) != 0;
+    current.SamaraRecruited = (vars.watchers["crewAcq4"].Current & (1 << 4)) != 0;
+    // DLC recruitments
+    current.ZaeedRecruited = (vars.watchers["crewAcq5"].Current & (1 << 4)) != 0;
+    current.KasumiRecruited = (vars.watchers["crewAcq6"].Current & (1 << 4)) != 0;
+
+    // Loyalty missions
+    current.MirandaLoyaltyMissionCompleted = (vars.watchers["loyaltyMissions1"].Current & (1 << 0)) != 0;
+    current.JacobLoyaltyMissionCompleted = (vars.watchers["loyaltyMissions1"].Current & (1 << 1)) != 0;
+    current.JackLoyaltyMissionCompleted = (vars.watchers["loyaltyMissions1"].Current & (1 << 2)) != 0;
+    current.LegionLoyaltyMissionCompleted = (vars.watchers["loyaltyMissions1"].Current & (1 << 3)) != 0;
+    current.KasumiLoyaltyMissionCompleted = (vars.watchers["loyaltyMissions1"].Current & (1 << 4)) != 0;
+    current.GarrusLoyaltyMissionCompleted = (vars.watchers["loyaltyMissions1"].Current & (1 << 5)) != 0;
+    current.ThaneLoyaltyMissionCompleted = (vars.watchers["loyaltyMissions1"].Current & (1 << 6)) != 0;
+    current.TaliLoyaltyMissionCompleted = (vars.watchers["loyaltyMissions1"].Current & (1 << 7)) != 0;
+    current.MordinLoyaltyMissionCompleted = (vars.watchers["loyaltyMissions2"].Current & (1 << 0)) != 0;
+    current.GruntLoyaltyMissionCompleted = (vars.watchers["loyaltyMissions2"].Current & (1 << 1)) != 0;
+    current.SamaraLoyaltyMissionCompleted = (vars.watchers["loyaltyMissions2"].Current & (1 << 2)) != 0;
+    current.ZaeedLoyaltyMissionCompleted = (vars.watchers["loyaltyMissions2"].Current & (1 << 3)) != 0;
+
+    // Loyalty status
+    current.MirandaIsLoyal = (vars.watchers["loyaltyStatus1"].Current & (1 << 1)) != 0;
+    current.JacobIsLoyal = (vars.watchers["loyaltyStatus1"].Current & (1 << 2)) != 0;
+    current.JackIsLoyal = (vars.watchers["loyaltyStatus1"].Current & (1 << 3)) != 0;
+    current.LegionIsLoyal = (vars.watchers["loyaltyStatus1"].Current & (1 << 4)) != 0;
+    current.KasumiIsLoyal = (vars.watchers["loyaltyStatus1"].Current & (1 << 6)) != 0;
+    current.GarrusIsLoyal = (vars.watchers["loyaltyStatus1"].Current & (1 << 7)) != 0;
+    current.ThaneIsLoyal = (vars.watchers["loyaltyStatus2"].Current & (1 << 1)) != 0;
+    current.TaliIsLoyal = (vars.watchers["loyaltyStatus2"].Current & (1 << 2)) != 0;
+    current.MordinIsLoyal = (vars.watchers["loyaltyStatus2"].Current & (1 << 4)) != 0;
+    current.GruntIsLoyal = (vars.watchers["loyaltyStatus2"].Current & (1 << 5)) != 0;
+    current.SamaraIsLoyal = (vars.watchers["loyaltyStatus2"].Current & (1 << 7)) != 0;
+    current.ZaeedIsLoyal = (vars.watchers["loyaltyStatus3"].Current & (1 << 0)) != 0;
+  } else if (vars.trilogy == 3) {
+    vars.watchers.UpdateAll(game);
+  }
 
 }
 
@@ -186,17 +341,148 @@ start
 
 isLoading
 {
-    if (vars.trilogy == 1) {
-        return (!vars.isLoading.Current || vars.isLoading2.Current);
-    } else {
-        return (!vars.isLoading.Current);
-    }
+  if (vars.trilogy == 1)
+  {
+    return false;
+  } else if (vars.trilogy == 2) {
+    return (vars.watchers["XPOS"].Old == 1136428027 && vars.watchers["YPOS"].Old == 3338886377 && vars.watchers["ZPOS"].Old == 1141172634 && (vars.watchers["XPOS"].Changed || vars.watchers["YPOS"].Changed));
+  } else if (vars.trilogy == 3) {
+    return (vars.watchers["XPOS"].Old == 3343853588 && vars.watchers["YPOS"].Old == 1187251110 && vars.watchers["ZPOS"].Old == 1181715610 && (vars.watchers["XPOS"].Changed || vars.watchers["YPOS"].Changed || vars.watchers["ZPOS"].Changed));
+  }
 }
 
 split
 {
   vars.enablesplit = false;
-  
+
+  if (vars.trilogy == 2) {
+    // Main story progression
+    if (settings["escapeLazarus"] && current.LazarusCompleted && !old.LazarusCompleted) {
+      print("Autosplitting: Lazarus completed");
+      vars.enablesplit = true;
+    } else if (settings["freedomProgress"] && current.FreedomProgressCompleted && !old.FreedomProgressCompleted) {
+      print("Autosplitting: Freedom's Progress completed");
+      vars.enablesplit = true;
+	} else if (settings["horizonCompleted"] && current.horizonCompleted && !old.horizonCompleted) { 
+      print("Autosplitting: Horizon completed");
+      vars.enablesplit = true;
+    } else if (settings["collectorShip"] && current.collectorShipCompleted && !old.collectorShipCompleted) { 
+      print("Autosplitting: Collector Ship completed");
+      vars.enablesplit = true;
+    } else if (settings["reaperIFF"] && current.reaperIFFcompleted && !old.reaperIFFcompleted) { 
+      print("Autosplitting: Reaper IFF mission completed");
+      vars.enablesplit = true;
+    } else if (settings["crewAbuct"] && current.crewAbductMissionComplete && !old.crewAbductMissionComplete) { 
+      print("Autosplitting: Joker Crew Abduction mission completed");
+      vars.enablesplit = true;
+    }
+
+    // Suicide Mission
+    if (settings["ME2Oculus"] && current.suicideOculusDestroyed && !old.suicideOculusDestroyed) {
+      print("Autosplitting: Suicide Mission - Oculus destroyed");
+      vars.enablesplit = true;
+    } else if (settings["ME2Valve"] && current.suicideValveCompleted && !old.suicideValveCompleted) {
+      print("Autosplitting: Suicide Mission - Valve opened");
+      vars.enablesplit = true;
+    } else if (settings["ME2Bubble"] && current.suicideBubbleCompleted && !old.suicideBubbleCompleted) {
+      print("Autosplitting: Suicide Mission - Biotic bubble section passed");
+      vars.enablesplit = true;
+    } else if (settings["ME2ending"] && current.suicideMissonCompleted && !old.suicideMissonCompleted) {
+      print("Autosplitting: Suicide Mission completed");
+      vars.enablesplit = true;
+    }
+
+    // 5 missions before collector ship
+    if (settings["ME2MissionsBeforeCollectorShip"] && current.horizonCompleted && !current.collectorShipCompleted) {
+      if (current.missionTracking == old.missionTracking + 1) {
+        print("Autosplitting: Mission completed");
+        vars.enablesplit = true;
+      }
+    }
+
+    // Up to 3 after IFF before Joker
+    if (settings["ME2MissionsBeforeCrewAbduction"] && current.reaperIFFcompleted && !current.crewAbductMissionComplete) {
+      if (current.missionTracking == old.missionTracking + 1) {
+        print("Autosplitting: Mission completed");
+        vars.enablesplit = true;
+      }
+    }
+
+    // Dossiers
+    if (settings["recruitMordin"] && current.MordinRecruited && !old.MordinRecruited) {
+      print("Autosplitting: Mordin recruited");
+      vars.enablesplit = true;
+    } else if (settings["recruitGarrus"] && current.GarrusRecruited && !old.GarrusRecruited) {
+      print("Autosplitting: Garrus recruited");
+      vars.enablesplit = true;
+    } else if (settings["acquireGrunt"] && current.GruntTankRecovered && !old.GruntTankRecovered) {
+      print("Autosplitting: Grunt's tank recovered");
+      vars.enablesplit = true;
+    } else if (settings["recruitJack"] && current.JackRecruited && !old.JackRecruited) {
+      print("Autosplitting: Jack recruited");
+      vars.enablesplit = true;
+    } else if (settings["recruitZaeed"] && current.ZaeedRecruited && !old.ZaeedRecruited) {
+      print("Autosplitting: Zaeed recruited");
+      vars.enablesplit = true;
+    } else if (settings["recruitKasumi"] && current.KasumiRecruited && !old.KasumiRecruited) {
+      print("Autosplitting: Kasumi recruited");
+      vars.enablesplit = true;
+    }
+    // Commented out unnecessary recruitment missions.
+    // Left them here in case of future needs.
+//  else if (settings["recruitTali"] && current.TaliRecruited && !old.TaliRecruited) {
+//    print("Autosplitting: Tali recruited");
+//    vars.enablesplit = true;
+//  } else if (settings["recruitSamara"] && current.SamaraRecruited && !old.SamaraRecruited) {
+//    print("Autosplitting: Samara recruited");
+//    vars.enablesplit = true;
+//  } else if (settings["recruitThane"] && current.ThaneRecruited && !old.ThaneRecruited) {
+//    print("Autosplitting: Thane recruited");
+//    vars.enablesplit = true;
+//  }
+
+    // Split after each loyalty mission, provided you completed it successfully AND secured your ally's loyalty
+    // That means, for example, that completing Tali's mission but having her exiled will not secure her loyalty, so the script will not split.
+    // This DOES NOT take into account the possibility of losing an ally's loyalty later on during confrontations.
+//    if (settings["loyaltyMiranda"] && current.MirandaIsLoyal && current.MirandaLoyaltyMissionCompleted && !old.MirandaLoyaltyMissionCompleted) {
+//      print("Autosplitting: Miranda Loyalty mission completed");
+//      vars.enablesplit = true;
+//    } else if (settings["loyaltyJacob"] && current.JacobIsLoyal && current.JacobLoyaltyMissionCompleted && !old.JacobLoyaltyMissionCompleted) {
+//      print("Autosplitting: Jacob Loyalty mission completed");
+//      vars.enablesplit = true;
+//    } else if (settings["loyaltyJack"] && current.JackIsLoyal && current.JackLoyaltyMissionCompleted && !old.JackLoyaltyMissionCompleted) {
+//      print("Autosplitting: Jack Loyalty mission completed");
+//      vars.enablesplit = true;
+//    } else if (settings["loyaltyLegion"] && current.LegionIsLoyal && current.LegionLoyaltyMissionCompleted && !old.LegionLoyaltyMissionCompleted) {
+//      print("Autosplitting: Legion Loyalty mission completed");
+//      vars.enablesplit = true;
+//    } else if (settings["loyaltyKasumi"] && current.KasumiIsLoyal && current.KasumiLoyaltyMissionCompleted && !old.KasumiLoyaltyMissionCompleted) {
+//      print("Autosplitting: Kasumi Loyalty mission completed");
+//      vars.enablesplit = true;
+//    } else if (settings["loyaltyGarrus"] && current.GarrusIsLoyal && current.GarrusLoyaltyMissionCompleted && !old.GarrusLoyaltyMissionCompleted) {
+//      print("Autosplitting: Garrus Loyalty mission completed");
+//      vars.enablesplit = true;
+//    } else if (settings["loyaltyThane"] && current.ThaneIsLoyal && current.ThaneLoyaltyMissionCompleted && !old.ThaneLoyaltyMissionCompleted) {
+//      print("Autosplitting: Thane Loyalty mission completed");
+//      vars.enablesplit = true;
+//    } else if (settings["loyaltyTali"] && current.TaliIsLoyal && current.TaliLoyaltyMissionCompleted && !old.TaliLoyaltyMissionCompleted) {
+//      print("Autosplitting: Tali Loyalty mission completed");
+//      vars.enablesplit = true;
+//    } else if (settings["loyaltyMordin"] && current.MordinIsLoyal && current.MordinLoyaltyMissionCompleted && !old.MordinLoyaltyMissionCompleted) {
+//      print("Autosplitting: Mordin Loyalty mission completed");
+//      vars.enablesplit = true;
+//    } else if (settings["loyaltyGrunt"] && current.GruntIsLoyal && current.GruntLoyaltyMissionCompleted && !old.GruntLoyaltyMissionCompleted) {
+//      print("Autosplitting: Grunt Loyalty mission completed");
+//      vars.enablesplit = true;
+//    } else if (settings["loyaltySamara"] && current.SamaraIsLoyal && current.SamaraLoyaltyMissionCompleted && !old.SamaraLoyaltyMissionCompleted) {
+//      print("Autosplitting: Samara / Morinth Loyalty mission completed");
+//      vars.enablesplit = true;
+//    } else if (settings["loyaltyZaeed"] && current.ZaeedIsLoyal && current.ZaeedLoyaltyMissionCompleted && !old.ZaeedLoyaltyMissionCompleted) {
+//      print("Autosplitting: Zaeed Loyalty mission completed");
+//      vars.enablesplit = true;
+//    }
+  }
+    
   if (vars.trilogy == 3) {  
     if (settings["prologue"] && (vars.watchers["plotData1"].Current & (1 << 1)) != 0  && (vars.watchers["plotData1"].Old & (1 << 1)) == 0) vars.enablesplit = true;
     if (settings["priorityMars"] && (vars.watchers["plotData2"].Current & (1 << 0)) != 0  && (vars.watchers["plotData2"].Old & (1 << 0)) == 0) vars.enablesplit = true;

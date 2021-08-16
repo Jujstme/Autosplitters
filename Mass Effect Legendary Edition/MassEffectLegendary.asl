@@ -31,13 +31,9 @@ init
         "8B 0D ????????",    // mov ecx,[MassEffect1.exe+16516B0]    // mov ecx,[MassEffect2.exe+16232F0]    // mov ecx,[MassEffect3.exe+1767AA0]  <----
         "85 C9"              // test ecx,ecx                         // test ecx,ecx                         // test ecx,ecx
     ));
-    if (ptr == IntPtr.Zero) {
-      throw new Exception("Could not find address!");
-    }
+    if (ptr == IntPtr.Zero) throw new Exception("Could not find address!");
     int relativePosition = (int)((long)ptr - (long)page.BaseAddress) + 4;
-    vars.isLoading = new MemoryWatcher<bool>(new DeepPointer(
-      relativePosition + game.ReadValue<int>(ptr)
-    ));
+    vars.isLoading = new MemoryWatcher<bool>(new DeepPointer(relativePosition + game.ReadValue<int>(ptr)));
 
     // For Mass Effect 1  an additional variable is used for loading messages
     if (vars.trilogy == 1) {
@@ -46,14 +42,10 @@ init
             "74 20",              // je MassEffect1.exe+2596F1
             "48 8B 03"            // mov rax,[rbx]
         ));
-        if (ptr == IntPtr.Zero) {
-          throw new Exception("Could not find address!");
-        }
+        if (ptr == IntPtr.Zero) throw new Exception("Could not find address!");
         relativePosition = (int)((long)ptr - (long)page.BaseAddress) + 5;
         // This value is 1 in load messages, otherwise it's 0
-        vars.isLoading2 = new MemoryWatcher<bool>(new DeepPointer(
-          relativePosition + game.ReadValue<int>(ptr)
-        ));
+        vars.isLoading2 = new MemoryWatcher<bool>(new DeepPointer(relativePosition + game.ReadValue<int>(ptr)));
     }
 
 
@@ -64,9 +56,7 @@ init
             "74 42",             // je MassEffect2.exe+6DAA15
             "4C 8B 05 ????????"  // mov r8,[MassEffect2.exe+1B675B0]  <----
         ));
-        if (ptr == IntPtr.Zero) {
-          throw new Exception("Could not find address!");
-        }
+        if (ptr == IntPtr.Zero) throw new Exception("Could not find address!");
         relativePosition = (int)((long)ptr - (long)page.BaseAddress) + 4;	
         vars.watchers = new MemoryWatcherList();
 
@@ -85,28 +75,18 @@ init
         vars.watchers.Add(new MemoryWatcher<byte>(new DeepPointer(relativePosition + game.ReadValue<int>(ptr) - 0x1B0 , 0xE8, 0x8, 0x68, 0x14, 0x70, 0x5C)) { Name = "missionTracking" });    // MIGHT BREAK
 
         // Dossiers
-        vars.watchers.Add(new MemoryWatcher<byte>(new DeepPointer(relativePosition + game.ReadValue<int>(ptr), 0x16C, 0xA34, 0x60, 0x278)) { Name = "crewAcq1" }); // For Mordin, Jack, Garrus, Tali
+        vars.watchers.Add(new MemoryWatcher<byte>(new DeepPointer(relativePosition + game.ReadValue<int>(ptr), 0x16C, 0xA34, 0x60, 0x278)) { Name = "crewAcq1" }); // For Mordin, Jack, Garrus
         vars.watchers.Add(new MemoryWatcher<byte>(new DeepPointer(relativePosition + game.ReadValue<int>(ptr), 0x16C, 0xA34, 0x60, 0x4D)) { Name = "crewAcq2" }); // For Grunt
-        vars.watchers.Add(new MemoryWatcher<byte>(new DeepPointer(relativePosition + game.ReadValue<int>(ptr), 0x16C, 0xA34, 0x60, 0x279)) { Name = "crewAcq3" }); // For Thane
-        vars.watchers.Add(new MemoryWatcher<byte>(new DeepPointer(relativePosition + game.ReadValue<int>(ptr), 0x16C, 0xA34, 0x60, 0x47)) { Name = "crewAcq4" }); // For Samara
         vars.watchers.Add(new MemoryWatcher<byte>(new DeepPointer(relativePosition + game.ReadValue<int>(ptr), 0x16C, 0xA34, 0x60, 0x32)) { Name = "crewAcq5" }); // For Zaeed
         vars.watchers.Add(new MemoryWatcher<byte>(new DeepPointer(relativePosition + game.ReadValue<int>(ptr), 0x16C, 0xA34, 0x60, 0xB9)) { Name = "crewAcq6" }); // For Kasumi
 
-        // Data for loyalty missions and loyalty status for each squadmate
-        vars.watchers.Add(new MemoryWatcher<byte>(new DeepPointer(relativePosition + game.ReadValue<int>(ptr), 0x16C, 0xA34, 0x60, 0x16)) { Name = "loyaltyStatus1" });
-        vars.watchers.Add(new MemoryWatcher<byte>(new DeepPointer(relativePosition + game.ReadValue<int>(ptr), 0x16C, 0xA34, 0x60, 0x17)) { Name = "loyaltyStatus2" });
-        vars.watchers.Add(new MemoryWatcher<byte>(new DeepPointer(relativePosition + game.ReadValue<int>(ptr), 0x16C, 0xA34, 0x60, 0x18)) { Name = "loyaltyStatus3" });
-        vars.watchers.Add(new MemoryWatcher<byte>(new DeepPointer(relativePosition + game.ReadValue<int>(ptr), 0x16C, 0xA34, 0x60, 0xBB)) { Name = "loyaltyMissions1" });
-        vars.watchers.Add(new MemoryWatcher<byte>(new DeepPointer(relativePosition + game.ReadValue<int>(ptr), 0x16C, 0xA34, 0x60, 0xBC)) { Name = "loyaltyMissions2" });
 
         ptr = scanner.Scan(new SigScanTarget(3,
             "48 8B 0D ????????",    // mov rcx,[MassEffect2.exe+1760010]
             "48 8B 0C F9",          // mov rcx,[rcx+rdi*8]
             "E8 FFC0E6FF"           // call MassEffect2.exe+404600
         ));
-        if (ptr == IntPtr.Zero) {
-          throw new Exception("Could not find address!");
-        }
+        if (ptr == IntPtr.Zero) throw new Exception("Could not find address!");
         relativePosition = (int)((long)ptr - (long)page.BaseAddress) + 4;
         vars.watchers.Add(new MemoryWatcher<uint>(new DeepPointer(relativePosition + game.ReadValue<int>(ptr), 0x0, 0x40, 0x118)) { Name = "XPOS" });
         vars.watchers.Add(new MemoryWatcher<uint>(new DeepPointer(relativePosition + game.ReadValue<int>(ptr), 0x0, 0x40, 0x11C)) { Name = "YPOS" });
@@ -119,33 +99,32 @@ init
         ptr = scanner.Scan(new SigScanTarget(7,
             "48 83 EC 28",          // sub rsp,28
             "48 8B 0D ?? ?? ?? ??", // mov rcx,[MassEffect3.exe+1CBBC70]   <----
-			"48 85 C9",             // test rcx,rcx
-			"75 1F",                // jne MassEffect3.exe+AD241F
-			"48 8D 0D 31C25D00"     // call MassEffect3.exe+AB0400
+            "48 85 C9",             // test rcx,rcx
+            "75 1F",                // jne MassEffect3.exe+AD241F
+            "48 8D 0D 31C25D00"     // call MassEffect3.exe+AB0400
         ));
-        if (ptr == IntPtr.Zero) {
-          throw new Exception("Could not find address!");
-        }
+        if (ptr == IntPtr.Zero) throw new Exception("Could not find address!");
         relativePosition = (int)((long)ptr - (long)page.BaseAddress) + 4;	
         vars.watchers = new MemoryWatcherList();
-		
-        vars.watchers.Add(new MemoryWatcher<byte>(new DeepPointer(relativePosition + game.ReadValue<int>(ptr), 0x13C, 0xF0, 0x9ED)) { Name = "plotData1" });
-        vars.watchers.Add(new MemoryWatcher<byte>(new DeepPointer(relativePosition + game.ReadValue<int>(ptr), 0x13C, 0xF0, 0xA09)) { Name = "plotData2" });
-        vars.watchers.Add(new MemoryWatcher<byte>(new DeepPointer(relativePosition + game.ReadValue<int>(ptr), 0x13C, 0xF0, 0xA0A)) { Name = "plotData3" });
-        vars.watchers.Add(new MemoryWatcher<byte>(new DeepPointer(relativePosition + game.ReadValue<int>(ptr), 0x13C, 0xF0, 0x8A2)) { Name = "plotData4" });
-        vars.watchers.Add(new MemoryWatcher<byte>(new DeepPointer(relativePosition + game.ReadValue<int>(ptr), 0x13C, 0xF0, 0xAF4)) { Name = "plotData5" });
-     // vars.watchers.Add(new MemoryWatcher<byte>(new DeepPointer(relativePosition + game.ReadValue<int>(ptr), 0x13C, 0xF0, 0xAF5)) { Name = "plotData6" });
-        vars.watchers.Add(new MemoryWatcher<byte>(new DeepPointer(relativePosition + game.ReadValue<int>(ptr), 0x13C, 0xF0, 0x940)) { Name = "plotData7" });
-        vars.watchers.Add(new MemoryWatcher<byte>(new DeepPointer(relativePosition + game.ReadValue<int>(ptr), 0x13C, 0xF0, 0x8FA)) { Name = "plotData8" });
-        vars.watchers.Add(new MemoryWatcher<byte>(new DeepPointer(relativePosition + game.ReadValue<int>(ptr), 0x13C, 0xF0, 0x983)) { Name = "plotData9" });
-        vars.watchers.Add(new MemoryWatcher<byte>(new DeepPointer(relativePosition + game.ReadValue<int>(ptr), 0x13C, 0xF0, 0x8A9)) { Name = "plotData10" });
-        vars.watchers.Add(new MemoryWatcher<byte>(new DeepPointer(relativePosition + game.ReadValue<int>(ptr), 0x13C, 0xF0, 0xAF8)) { Name = "plotData11" });
-        vars.watchers.Add(new MemoryWatcher<byte>(new DeepPointer(relativePosition + game.ReadValue<int>(ptr), 0x13C, 0xF0, 0x967)) { Name = "plotData12" });
-        vars.watchers.Add(new MemoryWatcher<byte>(new DeepPointer(relativePosition + game.ReadValue<int>(ptr), 0x13C, 0xF0, 0xAF9)) { Name = "plotData13" });
-        vars.watchers.Add(new MemoryWatcher<byte>(new DeepPointer(relativePosition + game.ReadValue<int>(ptr), 0x13C, 0xF0, 0xAFE)) { Name = "plotData14" });
-        vars.watchers.Add(new MemoryWatcher<byte>(new DeepPointer(relativePosition + game.ReadValue<int>(ptr), 0x13C, 0xF0, 0x9DD)) { Name = "plotData15" });
-        vars.watchers.Add(new MemoryWatcher<byte>(new DeepPointer(relativePosition + game.ReadValue<int>(ptr), 0x13C, 0xF0, 0xA70)) { Name = "plotData16" });
-        vars.watchers.Add(new MemoryWatcher<byte>(new DeepPointer(relativePosition + game.ReadValue<int>(ptr), 0x13C, 0xF0, 0xAF3)) { Name = "plotData17" });
+
+        // Story progression
+        vars.watchers.Add(new MemoryWatcher<byte>(new DeepPointer(relativePosition + game.ReadValue<int>(ptr), 0x13C, 0xF0, 0x9ED)) { Name = "prologueEarth" });
+        vars.watchers.Add(new MemoryWatcher<byte>(new DeepPointer(relativePosition + game.ReadValue<int>(ptr), 0x13C, 0xF0, 0xA09)) { Name = "priorityMars" });
+        vars.watchers.Add(new MemoryWatcher<byte>(new DeepPointer(relativePosition + game.ReadValue<int>(ptr), 0x13C, 0xF0, 0xA14)) { Name = "priorityCitadel" });
+        vars.watchers.Add(new MemoryWatcher<byte>(new DeepPointer(relativePosition + game.ReadValue<int>(ptr), 0x13C, 0xF0, 0x924)) { Name = "priorityPalaven" });
+        vars.watchers.Add(new MemoryWatcher<byte>(new DeepPointer(relativePosition + game.ReadValue<int>(ptr), 0x13C, 0xF0, 0x8A9)) { Name = "prioritySurkesh" });
+        vars.watchers.Add(new MemoryWatcher<byte>(new DeepPointer(relativePosition + game.ReadValue<int>(ptr), 0x13C, 0xF0, 0x940)) { Name = "preTuchanka" });
+        vars.watchers.Add(new MemoryWatcher<byte>(new DeepPointer(relativePosition + game.ReadValue<int>(ptr), 0x13C, 0xF0, 0x8FA)) { Name = "priorityTuchanka" });
+        vars.watchers.Add(new MemoryWatcher<byte>(new DeepPointer(relativePosition + game.ReadValue<int>(ptr), 0x13C, 0xF0, 0x983)) { Name = "priorityCitadelCerberus" });
+        vars.watchers.Add(new MemoryWatcher<byte>(new DeepPointer(relativePosition + game.ReadValue<int>(ptr), 0x13C, 0xF0, 0x8A9)) { Name = "priorityGethDread" });
+        vars.watchers.Add(new MemoryWatcher<byte>(new DeepPointer(relativePosition + game.ReadValue<int>(ptr), 0x13C, 0xF0, 0x934)) { Name = "rannochKoris" });
+        vars.watchers.Add(new MemoryWatcher<byte>(new DeepPointer(relativePosition + game.ReadValue<int>(ptr), 0x13C, 0xF0, 0x935)) { Name = "rannochGethServer" });
+        vars.watchers.Add(new MemoryWatcher<byte>(new DeepPointer(relativePosition + game.ReadValue<int>(ptr), 0x13C, 0xF0, 0x967)) { Name = "priorityRannoch" });
+        vars.watchers.Add(new MemoryWatcher<byte>(new DeepPointer(relativePosition + game.ReadValue<int>(ptr), 0x13C, 0xF0, 0x906)) { Name = "priorityThessia" });
+        vars.watchers.Add(new MemoryWatcher<byte>(new DeepPointer(relativePosition + game.ReadValue<int>(ptr), 0x13C, 0xF0, 0x989)) { Name = "priorityHorizonME3" });
+        vars.watchers.Add(new MemoryWatcher<byte>(new DeepPointer(relativePosition + game.ReadValue<int>(ptr), 0x13C, 0xF0, 0x9DD)) { Name = "priorityCerberusHead" });
+        vars.watchers.Add(new MemoryWatcher<byte>(new DeepPointer(relativePosition + game.ReadValue<int>(ptr), 0x13C, 0xF0, 0xA70)) { Name = "priorityEarth" });
+        vars.watchers.Add(new MemoryWatcher<byte>(new DeepPointer(relativePosition + game.ReadValue<int>(ptr), 0x13C, 0xF0, 0xAF3)) { Name = "priorityEndingME3" });
 
 
         ptr = scanner.Scan(new SigScanTarget(23,
@@ -157,9 +136,7 @@ init
             "48 63 FB",             // movsxd rdi,ebx
             "48 8B 05 ?? ?? ?? ??"  // mov rax,[MassEffect3.exe+18B4240]  <----
         ));
-        if (ptr == IntPtr.Zero) {
-          throw new Exception("Could not find address!");
-        }
+        if (ptr == IntPtr.Zero) throw new Exception("Could not find address!");
         relativePosition = (int)((long)ptr - (long)page.BaseAddress) + 4;
         vars.watchers.Add(new MemoryWatcher<uint>(new DeepPointer(relativePosition + game.ReadValue<int>(ptr), 0x0, 0x40, 0x108)) { Name = "XPOS" });
         vars.watchers.Add(new MemoryWatcher<uint>(new DeepPointer(relativePosition + game.ReadValue<int>(ptr), 0x0, 0x40, 0x10C)) { Name = "YPOS" });
@@ -195,10 +172,6 @@ startup
     settings.Add("acquireGrunt", true, "Dossier: The Warlord", "ME2");
     settings.Add("horizonCompleted", true, "Horizon", "ME2");
     settings.Add("ME2MissionsBeforeCollectorShip", true, "Missions splitting before unlocking Collector Ship", "ME2");
-//  settings.Add("ME2OptionalDossiers", true, "Optional Dossiers", "ME2");
-//  settings.Add("recruitThane", true, "Dossier: The Assassin", "ME2OptionalDossiers");
-//  settings.Add("recruitSamara", true, "Dossier: The Justicar", "ME2OptionalDossiers");
-//  settings.Add("recruitTali", true, "Dossier: Tali", "ME2OptionalDossiers");
     settings.Add("collectorShip", true, "Collector ship", "ME2");
     settings.Add("reaperIFF", true, "Reaper IFF", "ME2");
     settings.Add("ME2MissionsBeforeCrewAbduction", true, "Missions splitting before automatic crew abduction event", "ME2");
@@ -211,50 +184,37 @@ startup
     settings.Add("DLCcharactersRectuitment", false, "DLC Characters rectuitment", "ME2");
     settings.Add("recruitKasumi", true, "Dossier: The Master Thief", "DLCcharactersRectuitment");
     settings.Add("recruitZaeed", true, "Dossier: The Veteran", "DLCcharactersRectuitment");
-//  settings.Add("ME2LoyaltyMissions", true, "Loyalty Missions", "ME2");
-//  settings.Add("loyaltyMiranda", true, "Miranda", "ME2LoyaltyMissions");
-//  settings.Add("loyaltyJacob", true, "Jacob", "ME2LoyaltyMissions");
-//  settings.Add("loyaltyJack", true, "Jack", "ME2LoyaltyMissions");
-//  settings.Add("loyaltyLegion", true, "Legion", "ME2LoyaltyMissions");
-//  settings.Add("loyaltyKasumi", true, "Kasumi", "ME2LoyaltyMissions");
-//  settings.Add("loyaltyGarrus", true, "Garrus", "ME2LoyaltyMissions");
-//  settings.Add("loyaltyThane", true, "Thane", "ME2LoyaltyMissions");
-//  settings.Add("loyaltyTali", true, "Tali", "ME2LoyaltyMissions");
-//  settings.Add("loyaltyMordin", true, "Mordin", "ME2LoyaltyMissions");
-//  settings.Add("loyaltyGrunt", true, "Grunt", "ME2LoyaltyMissions");
-//  settings.Add("loyaltySamara", true, "Samara", "ME2LoyaltyMissions");
-//  settings.Add("loyaltyZaeed", true, "Zaeed", "ME2LoyaltyMissions");
 
-  // Mass Effect 3 autosplitting settings
-  settings.Add("ME3", true, "Mass Effect 3 - Autosplitting");
-  settings.Add("prologue", true, "Earth: Prologue", "ME3");
-  settings.Add("priorityMars", true, "Priority: Mars", "ME3");
-  settings.Add("priorityCitadel", true, "Priority: Citadel", "ME3");
-  settings.Add("priorityPalaven", true, "Priority: Palaven", "ME3");
-  settings.Add("prioritySurkesh", true, "Priority: Sur'Kesh", "ME3");
-  settings.Add("preTuchanka", true, "Side Missions before Priority: Tuchanka", "ME3");
-  settings.Add("turianPlatoon", true, "Tuchanka: Turian Platoon", "preTuchanka");
-  settings.Add("koganRachni", true, "Krogan: Attican Traverse", "preTuchanka");
-  settings.Add("priorityTuchanka", true, "Priority: Tuchanka", "ME3");
-  settings.Add("priorityBeforeThessia", true, "Priority: Citadel (Cerberus Attack)", "ME3");
-  settings.Add("priorityGethDreadnought", true, "Priority: Geth Dreadnought", "ME3");
-  settings.Add("preRannoch", true, "Side Missions before Priority: Rannoch", "ME3");
-  settings.Add("admiralKoris", true, "Rannoch: Admiral Koris", "preRannoch");
-  settings.Add("gethServer", true, "Rannoch: Geth Fighters Squadrons", "preRannoch");
-  settings.Add("priorityRannoch", true, "Priority: Rannoch", "ME3");
-  settings.Add("priorityThessia", true, "Priority: Thessia", "ME3");
-  settings.Add("priorityHorizon", true, "Priority: Horizon", "ME3");
-  settings.Add("priorityCerberusHQ", true, "Priority: Cerberus Headquarters", "ME3");
-  settings.Add("priorityEarth", true, "Priority: Earth", "ME3");  // Triggers when you reach the conduit
-  settings.Add("priorityEnding", true, "Priority: The Crucible", "ME3");  
+    // Mass Effect 3 autosplitting settings
+    settings.Add("ME3", true, "Mass Effect 3 - Autosplitting");
+    settings.Add("prologue", true, "Earth: Prologue", "ME3");
+    settings.Add("priorityMars", true, "Priority: Mars", "ME3");
+    settings.Add("priorityCitadel", true, "Priority: Citadel", "ME3");
+    settings.Add("priorityPalaven", true, "Priority: Palaven", "ME3");
+    settings.Add("prioritySurkesh", true, "Priority: Sur'Kesh", "ME3");
+    settings.Add("preTuchanka", true, "Side Missions before Priority: Tuchanka", "ME3");
+    settings.Add("turianPlatoon", true, "Tuchanka: Turian Platoon", "preTuchanka");
+    settings.Add("koganRachni", true, "Krogan: Attican Traverse", "preTuchanka");
+    settings.Add("priorityTuchanka", true, "Priority: Tuchanka", "ME3");
+    settings.Add("priorityBeforeThessia", true, "Priority: Citadel (Cerberus Attack)", "ME3");
+    settings.Add("priorityGethDreadnought", true, "Priority: Geth Dreadnought", "ME3");
+    settings.Add("preRannoch", true, "Side Missions before Priority: Rannoch", "ME3");
+    settings.Add("admiralKoris", true, "Rannoch: Admiral Koris", "preRannoch");
+    settings.Add("gethServer", true, "Rannoch: Geth Fighters Squadrons", "preRannoch");
+    settings.Add("priorityRannoch", true, "Priority: Rannoch", "ME3");
+    settings.Add("priorityThessia", true, "Priority: Thessia", "ME3");
+    settings.Add("priorityHorizon", true, "Priority: Horizon", "ME3");
+    settings.Add("priorityCerberusHQ", true, "Priority: Cerberus Headquarters", "ME3");
+    settings.Add("priorityEarth", true, "Priority: Earth", "ME3");  // Triggers when you reach the conduit
+    settings.Add("priorityEnding", true, "Priority: The Crucible", "ME3");  
 }
 
 
 update
 {
-    if (vars.isLoading != null) {
-      vars.isLoading.Update(game);
-    }
+  if (vars.isLoading != null) {
+    vars.isLoading.Update(game);
+  }
 
   if (vars.trilogy == 1) {
     if (vars.isLoading2 != null) {
@@ -286,43 +246,32 @@ update
     current.GarrusRecruited = (vars.watchers["crewAcq1"].Current & (1 << 5)) != 0;
     current.JackRecruited = (vars.watchers["crewAcq1"].Current & (1 << 3)) != 0;
     current.GruntTankRecovered = (vars.watchers["crewAcq2"].Current & (1 << 2)) != 0;
-    // Recruitment missions Phase 2
-    current.TaliRecruited = (vars.watchers["crewAcq1"].Current & (1 << 7)) != 0;
-    current.ThaneRecruited = (vars.watchers["crewAcq3"].Current & (1 << 1)) != 0;
-    current.SamaraRecruited = (vars.watchers["crewAcq4"].Current & (1 << 4)) != 0;
     // DLC recruitments
     current.ZaeedRecruited = (vars.watchers["crewAcq5"].Current & (1 << 4)) != 0;
     current.KasumiRecruited = (vars.watchers["crewAcq6"].Current & (1 << 4)) != 0;
 
-    // Loyalty missions
-    current.MirandaLoyaltyMissionCompleted = (vars.watchers["loyaltyMissions1"].Current & (1 << 0)) != 0;
-    current.JacobLoyaltyMissionCompleted = (vars.watchers["loyaltyMissions1"].Current & (1 << 1)) != 0;
-    current.JackLoyaltyMissionCompleted = (vars.watchers["loyaltyMissions1"].Current & (1 << 2)) != 0;
-    current.LegionLoyaltyMissionCompleted = (vars.watchers["loyaltyMissions1"].Current & (1 << 3)) != 0;
-    current.KasumiLoyaltyMissionCompleted = (vars.watchers["loyaltyMissions1"].Current & (1 << 4)) != 0;
-    current.GarrusLoyaltyMissionCompleted = (vars.watchers["loyaltyMissions1"].Current & (1 << 5)) != 0;
-    current.ThaneLoyaltyMissionCompleted = (vars.watchers["loyaltyMissions1"].Current & (1 << 6)) != 0;
-    current.TaliLoyaltyMissionCompleted = (vars.watchers["loyaltyMissions1"].Current & (1 << 7)) != 0;
-    current.MordinLoyaltyMissionCompleted = (vars.watchers["loyaltyMissions2"].Current & (1 << 0)) != 0;
-    current.GruntLoyaltyMissionCompleted = (vars.watchers["loyaltyMissions2"].Current & (1 << 1)) != 0;
-    current.SamaraLoyaltyMissionCompleted = (vars.watchers["loyaltyMissions2"].Current & (1 << 2)) != 0;
-    current.ZaeedLoyaltyMissionCompleted = (vars.watchers["loyaltyMissions2"].Current & (1 << 3)) != 0;
-
-    // Loyalty status
-    current.MirandaIsLoyal = (vars.watchers["loyaltyStatus1"].Current & (1 << 1)) != 0;
-    current.JacobIsLoyal = (vars.watchers["loyaltyStatus1"].Current & (1 << 2)) != 0;
-    current.JackIsLoyal = (vars.watchers["loyaltyStatus1"].Current & (1 << 3)) != 0;
-    current.LegionIsLoyal = (vars.watchers["loyaltyStatus1"].Current & (1 << 4)) != 0;
-    current.KasumiIsLoyal = (vars.watchers["loyaltyStatus1"].Current & (1 << 6)) != 0;
-    current.GarrusIsLoyal = (vars.watchers["loyaltyStatus1"].Current & (1 << 7)) != 0;
-    current.ThaneIsLoyal = (vars.watchers["loyaltyStatus2"].Current & (1 << 1)) != 0;
-    current.TaliIsLoyal = (vars.watchers["loyaltyStatus2"].Current & (1 << 2)) != 0;
-    current.MordinIsLoyal = (vars.watchers["loyaltyStatus2"].Current & (1 << 4)) != 0;
-    current.GruntIsLoyal = (vars.watchers["loyaltyStatus2"].Current & (1 << 5)) != 0;
-    current.SamaraIsLoyal = (vars.watchers["loyaltyStatus2"].Current & (1 << 7)) != 0;
-    current.ZaeedIsLoyal = (vars.watchers["loyaltyStatus3"].Current & (1 << 0)) != 0;
   } else if (vars.trilogy == 3) {
     vars.watchers.UpdateAll(game);
+
+    // Story progression
+    current.prologueEarthCompleted = (vars.watchers["prologueEarth"].Current & (1 << 1)) != 0;
+    current.priorityMarsCompleted = (vars.watchers["prologueEarth"].Current & (1 << 0)) != 0;
+    current.priorityCitadelCompleted = (vars.watchers["priorityCitadel"].Current & (1 << 5)) != 0;
+    current.priorityPalavenCompleted = (vars.watchers["priorityPalaven"].Current & (1 << 3)) != 0;
+    current.prioritySurkeshCompleted = (vars.watchers["prioritySurkesh"].Current & (1 << 7)) != 0;
+    current.priorityTurianPlatoonCompleted = (vars.watchers["preTuchanka"].Current & (1 << 2)) != 0;
+    current.priorityKroganRachniCompleted = (vars.watchers["preTuchanka"].Current & (1 << 3)) != 0;
+    current.priorityTuchankaCompleted = (vars.watchers["priorityTuchanka"].Current & (1 << 4)) != 0;
+    current.priorityCerberusCitadelCompleted = (vars.watchers["priorityCitadelCerberus"].Current & (1 << 0)) != 0;
+    current.priorityGethDreadCompleted = (vars.watchers["priorityGethDread"].Current & (1 << 5)) != 0;
+    current.priorityKorisCompleted = (vars.watchers["rannochKoris"].Current & (1 << 6)) != 0;
+    current.priorityGethServerCompleted = (vars.watchers["rannochGethServer"].Current & (1 << 0)) != 0;
+    current.priorityRannochCompleted = (vars.watchers["priorityRannoch"].Current & (1 << 6)) != 0;
+    current.priorityThessiaCompleted = (vars.watchers["priorityThessia"].Current & (1 << 2)) != 0;
+    current.priorityHorizonME3Completed = (vars.watchers["priorityHorizonME3"].Current & (1 << 7)) != 0;
+    current.priorityCerberusHQCompleted = (vars.watchers["priorityCerberusHead"].Current & (1 << 2)) != 0;
+    current.priorityEarthCompleted = (vars.watchers["priorityEarth"].Current & (1 << 0)) != 0;
+    current.endingReached = (vars.watchers["priorityEndingME3"].Current & (1 << 2)) != 0;
   }
 
 }
@@ -352,6 +301,9 @@ split
 {
   vars.enablesplit = false;
 
+  /////////////////////////////
+  // Mass Effect 2 splitting //
+  /////////////////////////////
   if (vars.trilogy == 2) {
     // Main story progression
     if (settings["escapeLazarus"] && current.LazarusCompleted && !old.LazarusCompleted) {
@@ -360,7 +312,7 @@ split
     } else if (settings["freedomProgress"] && current.FreedomProgressCompleted && !old.FreedomProgressCompleted) {
       print("Autosplitting: Freedom's Progress completed");
       vars.enablesplit = true;
-	} else if (settings["horizonCompleted"] && current.horizonCompleted && !old.horizonCompleted) { 
+    } else if (settings["horizonCompleted"] && current.horizonCompleted && !old.horizonCompleted) { 
       print("Autosplitting: Horizon completed");
       vars.enablesplit = true;
     } else if (settings["collectorShip"] && current.collectorShipCompleted && !old.collectorShipCompleted) { 
@@ -389,7 +341,7 @@ split
       vars.enablesplit = true;
     }
 
-    // 5 missions before collector ship
+    // Missions before collector ship (5 are required, this script will split after every mission)
     if (settings["ME2MissionsBeforeCollectorShip"] && current.horizonCompleted && !current.collectorShipCompleted) {
       if (current.missionTracking == old.missionTracking + 1) {
         print("Autosplitting: Mission completed");
@@ -397,7 +349,7 @@ split
       }
     }
 
-    // Up to 3 after IFF before Joker
+    // Missions after IFF acquisition, before crew abduction (up to 3 after IFF). Will split after every mission completed
     if (settings["ME2MissionsBeforeCrewAbduction"] && current.reaperIFFcompleted && !current.crewAbductMissionComplete) {
       if (current.missionTracking == old.missionTracking + 1) {
         print("Autosplitting: Mission completed");
@@ -405,7 +357,7 @@ split
       }
     }
 
-    // Dossiers
+    // Dossiers (used to split for Phase 1 of the game and for DLC characters)
     if (settings["recruitMordin"] && current.MordinRecruited && !old.MordinRecruited) {
       print("Autosplitting: Mordin recruited");
       vars.enablesplit = true;
@@ -425,80 +377,68 @@ split
       print("Autosplitting: Kasumi recruited");
       vars.enablesplit = true;
     }
-    // Commented out unnecessary recruitment missions.
-    // Left them here in case of future needs.
-//  else if (settings["recruitTali"] && current.TaliRecruited && !old.TaliRecruited) {
-//    print("Autosplitting: Tali recruited");
-//    vars.enablesplit = true;
-//  } else if (settings["recruitSamara"] && current.SamaraRecruited && !old.SamaraRecruited) {
-//    print("Autosplitting: Samara recruited");
-//    vars.enablesplit = true;
-//  } else if (settings["recruitThane"] && current.ThaneRecruited && !old.ThaneRecruited) {
-//    print("Autosplitting: Thane recruited");
-//    vars.enablesplit = true;
-//  }
-
-    // Split after each loyalty mission, provided you completed it successfully AND secured your ally's loyalty
-    // That means, for example, that completing Tali's mission but having her exiled will not secure her loyalty, so the script will not split.
-    // This DOES NOT take into account the possibility of losing an ally's loyalty later on during confrontations.
-//    if (settings["loyaltyMiranda"] && current.MirandaIsLoyal && current.MirandaLoyaltyMissionCompleted && !old.MirandaLoyaltyMissionCompleted) {
-//      print("Autosplitting: Miranda Loyalty mission completed");
-//      vars.enablesplit = true;
-//    } else if (settings["loyaltyJacob"] && current.JacobIsLoyal && current.JacobLoyaltyMissionCompleted && !old.JacobLoyaltyMissionCompleted) {
-//      print("Autosplitting: Jacob Loyalty mission completed");
-//      vars.enablesplit = true;
-//    } else if (settings["loyaltyJack"] && current.JackIsLoyal && current.JackLoyaltyMissionCompleted && !old.JackLoyaltyMissionCompleted) {
-//      print("Autosplitting: Jack Loyalty mission completed");
-//      vars.enablesplit = true;
-//    } else if (settings["loyaltyLegion"] && current.LegionIsLoyal && current.LegionLoyaltyMissionCompleted && !old.LegionLoyaltyMissionCompleted) {
-//      print("Autosplitting: Legion Loyalty mission completed");
-//      vars.enablesplit = true;
-//    } else if (settings["loyaltyKasumi"] && current.KasumiIsLoyal && current.KasumiLoyaltyMissionCompleted && !old.KasumiLoyaltyMissionCompleted) {
-//      print("Autosplitting: Kasumi Loyalty mission completed");
-//      vars.enablesplit = true;
-//    } else if (settings["loyaltyGarrus"] && current.GarrusIsLoyal && current.GarrusLoyaltyMissionCompleted && !old.GarrusLoyaltyMissionCompleted) {
-//      print("Autosplitting: Garrus Loyalty mission completed");
-//      vars.enablesplit = true;
-//    } else if (settings["loyaltyThane"] && current.ThaneIsLoyal && current.ThaneLoyaltyMissionCompleted && !old.ThaneLoyaltyMissionCompleted) {
-//      print("Autosplitting: Thane Loyalty mission completed");
-//      vars.enablesplit = true;
-//    } else if (settings["loyaltyTali"] && current.TaliIsLoyal && current.TaliLoyaltyMissionCompleted && !old.TaliLoyaltyMissionCompleted) {
-//      print("Autosplitting: Tali Loyalty mission completed");
-//      vars.enablesplit = true;
-//    } else if (settings["loyaltyMordin"] && current.MordinIsLoyal && current.MordinLoyaltyMissionCompleted && !old.MordinLoyaltyMissionCompleted) {
-//      print("Autosplitting: Mordin Loyalty mission completed");
-//      vars.enablesplit = true;
-//    } else if (settings["loyaltyGrunt"] && current.GruntIsLoyal && current.GruntLoyaltyMissionCompleted && !old.GruntLoyaltyMissionCompleted) {
-//      print("Autosplitting: Grunt Loyalty mission completed");
-//      vars.enablesplit = true;
-//    } else if (settings["loyaltySamara"] && current.SamaraIsLoyal && current.SamaraLoyaltyMissionCompleted && !old.SamaraLoyaltyMissionCompleted) {
-//      print("Autosplitting: Samara / Morinth Loyalty mission completed");
-//      vars.enablesplit = true;
-//    } else if (settings["loyaltyZaeed"] && current.ZaeedIsLoyal && current.ZaeedLoyaltyMissionCompleted && !old.ZaeedLoyaltyMissionCompleted) {
-//      print("Autosplitting: Zaeed Loyalty mission completed");
-//      vars.enablesplit = true;
-//    }
   }
-    
+
+
+  /////////////////////////////
+  // Mass Effect 3 splitting //
+  ///////////////////////////// 
   if (vars.trilogy == 3) {  
-    if (settings["prologue"] && (vars.watchers["plotData1"].Current & (1 << 1)) != 0  && (vars.watchers["plotData1"].Old & (1 << 1)) == 0) vars.enablesplit = true;
-    if (settings["priorityMars"] && (vars.watchers["plotData2"].Current & (1 << 0)) != 0  && (vars.watchers["plotData2"].Old & (1 << 0)) == 0) vars.enablesplit = true;
-    if (settings["priorityCitadel"] && (vars.watchers["plotData3"].Current & (1 << 1)) != 0  && (vars.watchers["plotData3"].Old & (1 << 1)) == 0) vars.enablesplit = true;
-    if (settings["priorityPalaven"] && (vars.watchers["plotData4"].Current & (1 << 7)) != 0  && (vars.watchers["plotData4"].Old & (1 << 7)) == 0) vars.enablesplit = true;  
-    if (settings["prioritySurkesh"] && (vars.watchers["plotData5"].Current & (1 << 4)) != 0  && (vars.watchers["plotData5"].Old & (1 << 4)) == 0) vars.enablesplit = true;
-    if (settings["turianPlatoon"] && (vars.watchers["plotData7"].Current & (1 << 2)) != 0  && (vars.watchers["plotData7"].Old & (1 << 2)) == 0) vars.enablesplit = true;
-    if (settings["koganRachni"] && (vars.watchers["plotData7"].Current & (1 << 3)) != 0  && (vars.watchers["plotData7"].Old & (1 << 3)) == 0) vars.enablesplit = true;
-    if (settings["priorityTuchanka"] && (vars.watchers["plotData8"].Current & (1 << 4)) != 0  && (vars.watchers["plotData8"].Old & (1 << 4)) == 0) vars.enablesplit = true;
-    if (settings["priorityBeforeThessia"] && (vars.watchers["plotData9"].Current & (1 << 0)) != 0  && (vars.watchers["plotData9"].Old & (1 << 0)) == 0) vars.enablesplit = true;
-    if (settings["priorityGethDreadnought"] && (vars.watchers["plotData10"].Current & (1 << 5)) != 0  && (vars.watchers["plotData10"].Old & (1 << 5)) == 0) vars.enablesplit = true;
-    if (settings["admiralKoris"] && (vars.watchers["plotData11"].Current & (1 << 6)) != 0  && (vars.watchers["plotData11"].Old & (1 << 6)) == 0) vars.enablesplit = true;
-    if (settings["gethServer"] && (vars.watchers["plotData11"].Current & (1 << 5)) != 0  && (vars.watchers["plotData11"].Old & (1 << 5)) == 0) vars.enablesplit = true;
-    if (settings["priorityRannoch"] && (vars.watchers["plotData12"].Current & (1 << 6)) != 0  && (vars.watchers["plotData12"].Old & (1 << 6)) == 0) vars.enablesplit = true;
-    if (settings["priorityThessia"] && (vars.watchers["plotData13"].Current & (1 << 6)) != 0  && (vars.watchers["plotData13"].Old & (1 << 6)) == 0) vars.enablesplit = true;
-    if (settings["priorityHorizon"] && (vars.watchers["plotData14"].Current & (1 << 6)) != 0  && (vars.watchers["plotData14"].Old & (1 << 6)) == 0) vars.enablesplit = true;
-    if (settings["priorityCerberusHQ"] && (vars.watchers["plotData15"].Current & (1 << 2)) != 0  && (vars.watchers["plotData15"].Old & (1 << 2)) == 0) vars.enablesplit = true;
-    if (settings["priorityEarth"] && (vars.watchers["plotData16"].Current & (1 << 0)) != 0  && (vars.watchers["plotData16"].Old & (1 << 0)) == 0) vars.enablesplit = true;
-    if (settings["priorityEnding"] && (vars.watchers["plotData17"].Current & (1 << 2)) != 0  && (vars.watchers["plotData17"].Old & (1 << 2)) == 0) vars.enablesplit = true;
+      if (settings["prologue"] && current.prologueEarthCompleted && !old.prologueEarthCompleted) {
+        print("Autosplitting: Prologue (Earth) completed");
+        vars.enablesplit = true;
+      } else if (settings["priorityMars"] && current.priorityMarsCompleted && !old.priorityMarsCompleted) {
+        print("Autosplitting: Priority Mars completed");
+        vars.enablesplit = true;
+      } else if (settings["priorityCitadel"] && current.priorityCitadelCompleted && !old.priorityCitadelCompleted) {
+        print("Autosplitting: Priority Citadel completed");
+        vars.enablesplit = true;
+      } else if (settings["priorityPalaven"] && current.priorityPalavenCompleted && !old.priorityPalavenCompleted) {
+        print("Autosplitting: Priority Palaven completed");
+        vars.enablesplit = true;
+      } else if (settings["prioritySurkesh"] && current.prioritySurkeshCompleted && !old.prioritySurkeshCompleted) {
+        print("Autosplitting: Priority Sur'Kesh completed");
+        vars.enablesplit = true;
+      } else if (settings["turianPlatoon"] && current.priorityTurianPlatoonCompleted && !old.priorityTurianPlatoonCompleted) {
+        print("Autosplitting: Tuchanka Turian Platoon completed");
+        vars.enablesplit = true;
+      } else if (settings["koganRachni"] && current.priorityKroganRachniCompleted && !old.priorityKroganRachniCompleted) {
+        print("Autosplitting: Krogan Attical Traverse completed");
+        vars.enablesplit = true;
+      } else if (settings["priorityTuchanka"] && current.priorityTuchankaCompleted && !old.priorityTuchankaCompleted) {
+        print("Autosplitting: Priority Tuchanka completed");
+        vars.enablesplit = true;
+      } else if (settings["priorityBeforeThessia"] && current.priorityCerberusCitadelCompleted && !old.priorityCerberusCitadelCompleted) {
+        print("Autosplitting: Citadel Cerberus Attack completed");
+        vars.enablesplit = true;
+      } else if (settings["priorityGethDreadnought"] && current.priorityGethDreadCompleted && !old.priorityGethDreadCompleted) {
+        print("Autosplitting: Priority Geth Dreadnought completed");
+        vars.enablesplit = true;
+      } else if (settings["admiralKoris"] && current.priorityKorisCompleted && !old.priorityKorisCompleted) {
+        print("Autosplitting: Rannoch Admiral Koris completed");
+        vars.enablesplit = true;
+      } else if (settings["gethServer"] && current.priorityGethServerCompleted && !old.priorityGethServerCompleted) {
+        print("Autosplitting: Rannoch Geth Fighter Squadrons completed");
+        vars.enablesplit = true;
+      } else if (settings["priorityRannoch"] && current.priorityRannochCompleted && !old.priorityRannochCompleted) {
+        print("Autosplitting: Priority Rannoch completed");
+        vars.enablesplit = true;
+      } else if (settings["priorityThessia"] && current.priorityThessiaCompleted && !old.priorityThessiaCompleted) {
+        print("Autosplitting: Priority Thessia completed");
+        vars.enablesplit = true;
+      } else if (settings["priorityHorizon"] && current.priorityHorizonME3Completed && !old.priorityHorizonME3Completed) {
+        print("Autosplitting: Priority Horizon completed");
+        vars.enablesplit = true;
+      } else if (settings["priorityCerberusHQ"] && current.priorityCerberusHQCompleted && !old.priorityCerberusHQCompleted) {
+        print("Autosplitting: Priority Cerberus Headquarters completed");
+        vars.enablesplit = true;
+      } else if (settings["priorityEarth"] && current.priorityEarthCompleted && !old.priorityEarthCompleted) {
+        print("Autosplitting: Priority Earth completed");
+        vars.enablesplit = true;
+      } else if (settings["priorityEnding"] && current.endingReached && !old.endingReached) {
+        print("Autosplitting: Game complete");
+        vars.enablesplit = true;
+      }
   }
 
   return vars.enablesplit;

@@ -329,18 +329,6 @@ update
 
 start
 {
-  if (vars.trilogy == 1 || vars.trilogy == 2)
-  {
-    return false;
-  } else if (vars.trilogy == 3) {
-    if (vars.watchers["XPOS"].Old == 3343853588 && vars.watchers["YPOS"].Old == 1187251110 && vars.watchers["ZPOS"].Old == 1181715610 && (vars.watchers["XPOS"].Changed || vars.watchers["YPOS"].Changed || vars.watchers["ZPOS"].Changed)) {
-      return true;
-    }
-  }
-}
-
-isLoading
-{
   if (vars.trilogy == 1)
   {
     return false;
@@ -349,6 +337,15 @@ isLoading
   } else if (vars.trilogy == 3) {
     return (vars.watchers["XPOS"].Old == 3343853588 && vars.watchers["YPOS"].Old == 1187251110 && vars.watchers["ZPOS"].Old == 1181715610 && (vars.watchers["XPOS"].Changed || vars.watchers["YPOS"].Changed || vars.watchers["ZPOS"].Changed));
   }
+}
+
+isLoading
+{
+    if (vars.trilogy == 1) {
+        return (!vars.isLoading.Current || vars.isLoading2.Current);
+    } else {
+        return (!vars.isLoading.Current);
+    }
 }
 
 split

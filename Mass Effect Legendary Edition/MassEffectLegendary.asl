@@ -111,12 +111,18 @@ init
 
     if (vars.trilogy == 3) {
     // Mass Effect 3 plot bools for automatic splitting
-        ptr = scanner.Scan(new SigScanTarget(7,
+        ptr = scanner.Scan(new SigScanTarget(13,
+            "C3",                   // ret
+            "CC",                   // int 3
+            "CC",                   // int 3
+            "CC",                   // int 3
+            "CC",                   // int 3
+            "CC",                   // int 3
             "48 83 EC 28",          // sub rsp,28
             "48 8B 0D ????????",    // mov rcx,[MassEffect3.exe+1CBBC70]   <----
             "48 85 C9",             // test rcx,rcx
             "75 1F",                // jne MassEffect3.exe+AD241F
-            "48 8D 0D 31C25D00"));  // call MassEffect3.exe+AB0400
+            "48 8D 0D ????????"));  // lea rcx,[MassEffect3.exe+10AE638]
         if (ptr == IntPtr.Zero) throw new Exception("Could not find address!");
 
         // Story progression

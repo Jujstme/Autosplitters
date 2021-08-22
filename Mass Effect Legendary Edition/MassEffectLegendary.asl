@@ -147,7 +147,7 @@ init
 
 
         // XYZ position
-        ptr = scanner.Scan(new SigScanTarget(8,
+        ptr = scanner.Scan(new SigScanTarget(23,
             "0F1F 44 00 00",        // nop dword ptr [rax+rax+00]
             "85 DB",                // test ebx,ebx
             "78 3A",                // js MassEffect3.exe+59A75E

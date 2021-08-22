@@ -148,15 +148,19 @@ init
 
         // XYZ position
         ptr = scanner.Scan(new SigScanTarget(8,
-            "7D 32",                // jnl MassEffect3.exe+599F4E
+            "0F1F 44 00 00",        // nop dword ptr [rax+rax+00]
+            "85 DB",                // test ebx,ebx
+            "78 3A",                // js MassEffect3.exe+59A75E
+            "3B 1D ????????",       // cmp ebx,[MassEffect3.exe+18B4248
+            "7D 32",                // jnl MassEffect3.exe+59A75E
             "48 63 FB",             // movsxd rdi,ebx
-            "48 8B 05 ????????"));  // mov rax,[MassEffect3.exe+18B41E0]  <----
+            "48 8B 05 ????????"));  // mov rax,[MassEffect3.exe+18B4240]  <----
         if (ptr == IntPtr.Zero) throw new Exception("Could not find address!");
         plotBools = new Dictionary<string, int>();
         plotBools.Add("XPOS", 0x108); // XPOS
         plotBools.Add("YPOS", 0x10C); // YPOS
         plotBools.Add("ZPOS", 0x110); // ZPOS
-        foreach(KeyValuePair<string, int> entry in plotBools) vars.watchers.Add(new MemoryWatcher<uint>(new DeepPointer(targetAddress(ptr, 4), 0xF0, 0x78, entry.Value)) { Name = entry.Key });
+        foreach(KeyValuePair<string, int> entry in plotBools) vars.watchers.Add(new MemoryWatcher<uint>(new DeepPointer(targetAddress(ptr, 4), 0x0, 0x78, entry.Value)) { Name = entry.Key });
     }
 }
 

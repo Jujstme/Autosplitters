@@ -3,95 +3,48 @@
 // Version: 1.2
 // In case of bugs, please contact me at just.tribe@gmail.com
 
-state("HotshotRacing") {}
+state("HotshotRacing", "v1.0")
+{
+  float runstart: 0x12F5F40, 0x2A8;
+  byte racestatus: 0x12F5EEC;					// 0 idle; 1 stage intro: 3 countdown; 4 racing; 5 results screen
+  byte racecompleted: 0x12F631C;				// becomes 1 when completing a race, becomes 3 in case of TimeOut
+  float igt: 0x12F5F10, 0x4;					// starts at the start of every race and stops at the results screen
+  float totalracetime: 0x12F5EB8, 0x0, 0xAF8, 0x0, 0xE8, 0x34;	// updates itself each time you complete a lap (final lap included)
+  byte trackorder: 0x12F7138;					// Becomes 4 at the end of a GP
+}
+
+state("HotshotRacing", "v1.1")
+{
+  float runstart: 0x12F8FE8, 0x2A8;
+  byte racestatus: 0x12F8F94;					// 0 idle; 1 stage intro: 3 countdown; 4 racing; 5 results screen
+  byte racecompleted: 0x12F931C;				// becomes 1 when completing a race, becomes 3 in case of TimeOut
+  float igt: 0x12F8FB8, 0x4;					// starts at the start of every race and stops at the results screen
+  float totalracetime: 0x12F8F60, 0x0, 0xAF8, 0x0, 0xE8, 0x34;	// updates itself each time you complete a lap (final lap included)
+  byte trackorder: 0x12FA138;					// Becomes 4 at the end of a GP
+}
+
+state("HotshotRacing", "v1.2 (BOSS LEVEL DLC)")
+{
+  float runstart: 0x1317D18, 0x2A8;
+  byte racestatus: 0x1317CAC;					// 0 idle; 1 stage intro: 3 countdown; 4 racing; 5 results screen
+  byte racecompleted: 0x1317F0C;				// becomes 1 when completing a race, becomes 3 in case of TimeOut
+  float igt: 0x1317CD0, 0x4;					// starts at the start of every race and stops at the results screen
+  float totalracetime: 0x1317C80, 0x0, 0xE8, 0x34;		// updates itself each time you complete a lap (final lap included)
+  byte trackorder: 0x13191C8;					// Becomes 4 at the end of a GP
+}
 
 init
 {
-    var page = modules.First();
-    var scanner = new SignatureScanner(game, page.BaseAddress, page.ModuleMemorySize);
-
-    IntPtr ptr = scanner.Scan(new SigScanTarget(3,
-        "48 8B 0D ????????", // mov rcx,[HotshotRacing.exe+1317D18]  <----
-        "48 85 C9",          // test rcx,rcx
-        "74 08",             // je HotshotRacing.exe+E7343
-        "0F28 CE",           // movaps xmm1,xmm6
-        "E8 ????????",       // call HotshotRacing.exe+E76E0
-        "48 89 74 24 50"     // mov [rsp+50],rsi
-    ));
-    if (ptr == IntPtr.Zero) {
-      throw new Exception("Could not find address!");
-    }
-    int relativePosition = (int)((long)ptr - (long)page.BaseAddress) + 4;
-    vars.runstart = new MemoryWatcher<float>(new DeepPointer(
-      relativePosition + game.ReadValue<int>(ptr), 0x2A8
-    ));
-	
-    ptr = scanner.Scan(new SigScanTarget(10,
-        "74 06",            // je HotshotRacing.exe+E7548
-        "83 E3 F7",         // and ebx,-09
-        "89 5F 10",         // mov [rdi+10],ebx
-        "8B 0D ????????"    // mov ecx,[HotshotRacing.exe+1317CAC]  <----
-    ));
-    if (ptr == IntPtr.Zero) {
-      throw new Exception("Could not find address!");
-    }
-    relativePosition = (int)((long)ptr - (long)page.BaseAddress) + 4;
-    vars.racestatus = new MemoryWatcher<byte>(new DeepPointer(
-      relativePosition + game.ReadValue<int>(ptr)
-    ));
-
-    ptr = scanner.Scan(new SigScanTarget(2,
-        "89 1D ????????",     // mov [HotshotRacing.exe+1317F0C],ebx  <----
-        "48 8B 0D ????????",  // mov rcx,[HotshotRacing.exe+1317D00]
-        "48 8B 01"            // mov rax,[rcx]
-    ));
-    if (ptr == IntPtr.Zero) {
-      throw new Exception("Could not find address!");
-    }
-    relativePosition = (int)((long)ptr - (long)page.BaseAddress) + 4;
-    vars.racecompleted = new MemoryWatcher<byte>(new DeepPointer(
-      relativePosition + game.ReadValue<int>(ptr)
-    ));
-
-    ptr = scanner.Scan(new SigScanTarget(3,
-        "48 8B 05 ????????",    // mov rax,[HotshotRacing.exe+1317CD0]  <----
-        "F3 0F10 40 04",        // movss xmm0,[rax+04]
-        "C3"                    // ret
-    ));
-    if (ptr == IntPtr.Zero) {
-      throw new Exception("Could not find address!");
-    }
-    relativePosition = (int)((long)ptr - (long)page.BaseAddress) + 4;
-    vars.igt = new MemoryWatcher<float>(new DeepPointer(
-      relativePosition + game.ReadValue<int>(ptr), 0x4
-    ));
-
-    ptr = scanner.Scan(new SigScanTarget(5,
-        "8B F7",                  // mov mov esi,edi
-        "48 83 3D ???????? 00",   // cmp qword ptr [HotshotRacing.exe+1317C80],00  <----
-        "75 41"                   // jne HotshotRacing.exe+D96A1
-    ));
-    if (ptr == IntPtr.Zero) {
-      throw new Exception("Could not find address!");
-    }
-    relativePosition = (int)((long)ptr - (long)page.BaseAddress) + 5;
-    vars.totalracetime = new MemoryWatcher<float>(new DeepPointer(
-      relativePosition + game.ReadValue<int>(ptr), 0x0, 0xE8, 0x34
-    ));
-
-    ptr = scanner.Scan(new SigScanTarget(2,
-        "8B 15 ????????",     // mov edx,[HotshotRacing.exe+13191C8]  <----
-        "48 8B CB",           // mov rcx,rbx
-        "83 3D ???????? 02"   // cmp dword ptr [HotshotRacing.exe+130D604],02
-    ));
-    if (ptr == IntPtr.Zero) {
-      throw new Exception("Could not find address!");
-    }
-    relativePosition = (int)((long)ptr - (long)page.BaseAddress) + 4;
-    vars.trackorder = new MemoryWatcher<byte>(new DeepPointer(
-      relativePosition + game.ReadValue<int>(ptr)
-    ));
-  
+  if (modules.First().ModuleMemorySize == 0x144C000) {
+    version = "v1.0";
+  } else if (modules.First().ModuleMemorySize == 0x144F000) {
+    version = "v1.1";
+  } else if (modules.First().ModuleMemorySize == 0x146D000) {
+    version = "v1.2 (BOSS LEVEL DLC)";
+  } else {
+    version = "unsupported";
+    MessageBox.Show("This game version is currently not supported. Autosplitting and in-game timer calculation will be disabled.", "LiveSplit Auto Splitter - Unsupported Game Version");
+  }
 }
 
 startup
@@ -112,44 +65,40 @@ start
   vars.progressIGT = 0;
     
   if (settings["StartTime"]) {
-    return (vars.runstart.Current >= 2 && vars.igt.Current == 0 && vars.racestatus.Current == 3 && vars.trackorder.Current == 0); 
+    return(current.runstart >= 2 && current.igt == 0 && current.racestatus == 3 && current.trackorder == 0); 
   } else {
-    return (vars.igt.Old == 0 && vars.igt.Current != 0 && vars.trackorder.Current == 0);
+    return(current.igt != 0 && old.igt == 0 && current.trackorder == 0);
   }
 }
 
 
 update
 {
-    if (vars.runstart != null) {
-	  vars.runstart.Update(game);
-	  vars.racestatus.Update(game);
-	  vars.racecompleted.Update(game);
-	  vars.igt.Update(game);
-	  vars.totalracetime.Update(game);
-	  vars.trackorder.Update(game);
-	}
-
+  // If the game version is unsupported, disable the autosplitter completely
+  if (version == "unsupported") {
+    return false;
+  } else {
     // During a race, the IGT is calculated by the game and is added to the total
-    if (vars.racecompleted.Current == 0)  {
+    if (current.racecompleted == 0)	{
 			
       // If you restart an event or a race, the IGT of the failed race is still considered and added
-      if (vars.igt.Old != 0 && vars.igt.Current == 0 && vars.racestatus.Old == 4) {
-        vars.totaligt = vars.igt.Old + vars.totaligt;
+      if (old.igt != 0 && current.igt == 0 && old.racestatus == 4) {
+        vars.totaligt = old.igt + vars.totaligt;
         vars.progressIGT = vars.totaligt;
       }
       else
       {
-        vars.progressIGT = vars.igt.Current + vars.totaligt;
+        vars.progressIGT = current.igt + vars.totaligt;
       }
     }
 
     // How to behave the moment you complete a race:
-    if (vars.racecompleted.Current == 1 && vars.racecompleted.Current.Old == 0)
+    if (current.racecompleted == 1 && old.racecompleted == 0)
     {
-      vars.totaligt = (Math.Truncate(1000 * (vars.totalracetime.Current + vars.totaligt)) / 1000);
+      vars.totaligt = (Math.Truncate(1000 * (current.totalracetime + vars.totaligt)) / 1000);
       vars.progressIGT = vars.totaligt;
     }
+  }
 }
 
 gameTime
@@ -161,11 +110,11 @@ split
 {
   // Split automatically once you reach the finish line at the end of each track
   if (settings["GPsplit"]) {
-    return (vars.trackorder.Current == 4 && vars.racecompleted.Current == 1 && vars.racecompleted.Old == 0);
+    return (current.trackorder == 4 && current.racecompleted == 1 && old.racecompleted == 0);
   }
   else
   {
-    return (vars.racecompleted.Current == 1 && vars.racecompleted.Old == 0);
+    return (current.racecompleted == 1 && old.racecompleted == 0);
   }
 }
 

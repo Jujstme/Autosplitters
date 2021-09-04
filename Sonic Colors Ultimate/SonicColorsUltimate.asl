@@ -149,7 +149,7 @@ startup
 	// Add settings for each level, using the codenames from above
 	settings.Add("1", false, "Support for Egg Shuttle is limited at this moment");
 	settings.Add("2", false, "IGT works, autosplitting in Egg Shuttle will be added soon");
-	settings.Add("3", false, "Any% and All Chaos Emeralds categories are fully supported");
+	settings.Add("3", false, "Any% category is fully supported");
 	settings.Add("levelSplitting", true, "Automatic splitting configuration");
 	for (int i = 0; i < worldName[0].Length; i++) settings.Add(worldName[0][i], true, worldName[1][i], "levelSplitting");
 	for (int i = 0; i < 8; i++){

@@ -1,6 +1,6 @@
 // IGT timer autosplitter
 // Coding: Jujstme
-// Version: 1.1
+// Version: 1.2.1
 // contacts: just.tribe@gmail.com
 // Discord: https://discord.com/invite/XRsRwRU
 // Please do contact me if you have issues with the script
@@ -29,6 +29,24 @@ init
 		"48 89 05 ????????")); // mov ["Sonic colors - Ultimate.exe"+52465C0],rax
 	if (ptr == IntPtr.Zero) throw new Exception("Could not find address - IGT!");
 	vars.watchers.Add(new MemoryWatcher<float>(new DeepPointer(ptr + 4 + memory.ReadValue<int>(ptr), 0x0, 0x270)) { Name = "IGT", FailAction = MemoryWatcher.ReadFailAction.SetZeroOrNull });
+
+	// Universal level completion flag
+	vars.watchers.Add(new MemoryWatcher<byte>(new DeepPointer(ptr + 4 + memory.ReadValue<int>(ptr), 0x0, 0x110)) { Name = "dummyLevelCompleted", FailAction = MemoryWatcher.ReadFailAction.SetZeroOrNull });
+
+	// Dummy runStart variable for Egg Shuttle
+	vars.watchers.Add(new MemoryWatcher<byte>(new DeepPointer(ptr + 4 + memory.ReadValue<int>(ptr), 0x0, 0xE0)) { Name = "runStart_EggShuttle", FailAction = MemoryWatcher.ReadFailAction.SetZeroOrNull });
+
+	// Egg Shuttle data pointer
+	ptr = scanner.Scan(new SigScanTarget(5,
+		"76 0C",               // jna "Sonic Colors - Ultimate.exe"+16DF25C
+		"48 8B 0D ????????")); // mov rcx,["Sonic colors - Ultimate.exe"+5245658]
+	if (ptr == IntPtr.Zero) throw new Exception("Could not find address - Egg Shuttle data!");
+
+	// Dummy runStart2 variable for Egg Shuttle
+	vars.watchers.Add(new MemoryWatcher<bool>(new DeepPointer(ptr + 4 + memory.ReadValue<int>(ptr), 0x8, 0x38, 0x68, 0x110, 0xBC)) { Name = "runStart2_EggShuttle", FailAction = MemoryWatcher.ReadFailAction.SetZeroOrNull });
+
+	// Egg Shuttle Level ID
+	vars.watchers.Add(new MemoryWatcher<byte>(new DeepPointer(ptr + 4 + memory.ReadValue<int>(ptr), 0x8, 0x38, 0x68, 0x110, 0xB8)) { Name = "eggShuttle_levelID", FailAction = MemoryWatcher.ReadFailAction.SetZeroOrNull });
 
 	// Stage completion pointers
 	ptr = scanner.Scan(new SigScanTarget(5,
@@ -121,8 +139,17 @@ init
 	{vars.levelNames[7][19], new Tuple<string, int>("levelflags10", 7)},
 	{vars.levelNames[7][20], new Tuple<string, int>("levelflags11", 0)}};
 
+	// Egg Shuttle progressive Level IDs
+	vars.eggShuttleLevels = new string[45];
+	for (int i = 0; i < 7; i++){
+		for (int j = 0; j < vars.levelNames[i].Length; j++) vars.eggShuttleLevels[i*7 + j] = vars.levelNames[i][j];
+	}
+
 	// Define basic status variables we need in the run
 	vars.totalIGT = 0f;
+	vars.isEggShuttle = "eggShuttle";
+	vars.isNotEggShuttle = "standard";
+	vars.runCategory = vars.isEggShuttle;
 }
 
 startup
@@ -147,31 +174,53 @@ startup
 	};
 
 	// Add settings for each level, using the codenames from above
-	settings.Add("1", false, "Support for Egg Shuttle is limited at this moment");
-	settings.Add("2", false, "IGT works, autosplitting in Egg Shuttle will be added soon");
-	settings.Add("3", false, "Any% category is fully supported");
 	settings.Add("levelSplitting", true, "Automatic splitting configuration");
 	for (int i = 0; i < worldName[0].Length; i++) settings.Add(worldName[0][i], true, worldName[1][i], "levelSplitting");
 	for (int i = 0; i < 8; i++){
 		for (int j = 0; j < vars.levelNames[i].Length; j++) settings.Add(vars.levelNames[i][j], true, (i < 6 && j == 6) || (i == 6 && j == 1) ? "BOSS" : i > 6 ? vars.levelNames[i][j] : "Act " + (i == 6 && j == 2 ? j.ToString() : (j+1).ToString()) , worldName[0][i > 6 ? 7 : i]);
 	}
-}
 
+	// In-game timing is used for Egg Shuttle
+	if (timer.CurrentTimingMethod == TimingMethod.RealTime) {
+		var timingMessage = MessageBox.Show (
+		"This game uses in-game timing (IGT) as the main timing method for Egg Shuttle on speedrun.com.\n"+
+		"LiveSplit is currently set to show Real Time (RTA).\n\n"+
+		"Would you like to set the timing method to Game Time?",
+		"Sonic Colors: Ultimate | LiveSplit",
+		MessageBoxButtons.YesNo,MessageBoxIcon.Question);
+		if (timingMessage == DialogResult.Yes) {
+				timer.CurrentTimingMethod = TimingMethod.GameTime;
+				MessageBox.Show("Timing method has been set to GameTime!", "Sonic Colors: Ultimate | LiveSplit", MessageBoxButtons.OK, MessageBoxIcon.Information);
+			} else if (timingMessage == DialogResult.No) {
+				timer.CurrentTimingMethod = TimingMethod.RealTime;
+				MessageBox.Show("Timing method will stay set to Real Time (RTA).", "Sonic Colors: Ultimate | LiveSplit", MessageBoxButtons.OK, MessageBoxIcon.Information);
+		}
+	}
+}
 
 update
 {
 	// Update watchers
 	vars.watchers.UpdateAll(game);
 
-	// If the timer is stopped (for example when you reset a run) make sure to reset the IGT variable
-	if (timer.CurrentPhase == TimerPhase.NotRunning) vars.totalIGT = 0f;
-
-	// Fixing the IGT
+	// The game calculates the IGT for each stage by simply truncating the float value to the second decimal
 	vars.watchers["IGT"].Current = vars.Truncate(vars.watchers["IGT"].Current);
 
-	// Defining levelCompleted
+	// Calculating the completion bools for each level in the game
 	current.levelCompleted = new Dictionary<string, bool>();
 	foreach (var entry in vars.plotBools) current.levelCompleted.Add(entry.Key, vars.bitCheck(entry.Value.Item1, entry.Value.Item2));
+
+	// "Universal" level completion flag - becomes true when you complete a level, regardless of the level or game mode
+	current.dummyLevelCompleted = vars.bitCheck("dummyLevelCompleted", 5);
+
+	// Variables that need to be managed only when the run hasn't started yet
+	if (timer.CurrentPhase == TimerPhase.NotRunning)
+	{
+		// If the timer is stopped (for example when you reset a run) make sure to reset the IGT variable
+		vars.totalIGT = 0f;
+		// If Tropical Resort Act 1 is marked as not completed at the start of the run, the game assumes you are running Any%. Otherwise is assumes you are running Egg Shuttle by default.
+		vars.runCategory = current.levelCompleted[vars.levelNames[0][0]] ? vars.isEggShuttle : vars.isNotEggShuttle;
+	}
 
 	// IGT logic: Use an internal totalIGT variable in which we will store the accumulated IGT every time the game IGT resets
 	if (vars.watchers["IGT"].Old != 0 && vars.watchers["IGT"].Current == 0) vars.totalIGT += vars.watchers["IGT"].Old;
@@ -179,7 +228,12 @@ update
 
 start
 {
-	return (vars.watchers["runStart"].Old == 35 && vars.watchers["runStart"].Current == 110);
+	if (vars.runCategory == vars.isEggShuttle) {
+		vars.ShouldStart = vars.watchers["runStart_EggShuttle"].Current == 115 && vars.watchers["runStart_EggShuttle"].Changed && vars.watchers["runStart2_EggShuttle"].Current;
+	} else {
+		vars.ShouldStart = vars.watchers["runStart"].Old == 35 && vars.watchers["runStart"].Current == 110;
+	}
+	return vars.ShouldStart;
 }
 
 reset
@@ -189,10 +243,18 @@ reset
 
 split
 {
-	foreach (var entry in vars.plotBools)
-	{
-		if (old.levelCompleted[entry.Key] == current.levelCompleted[entry.Key]) continue;
-		return settings[entry.Key] && current.levelCompleted[entry.Key];
+	if (vars.runCategory == vars.isEggShuttle) {
+		if (vars.watchers["eggShuttle_levelID"].Current == vars.watchers["eggShuttle_levelID"].Old + 1 && settings[vars.eggShuttleLevels[vars.watchers["eggShuttle_levelID"].Old]] && vars.watchers["eggShuttle_levelID"].Current != 45) {
+			return true;
+		} else if (vars.watchers["eggShuttle_levelID"].Current == 44 && current.dummyLevelCompleted && !old.dummyLevelCompleted && settings[vars.eggShuttleLevels[44]]) { 
+			return true;
+		}
+	} else {
+		foreach (var entry in vars.plotBools)
+		{
+			if (old.levelCompleted[entry.Key] == current.levelCompleted[entry.Key]) continue;
+			return settings[entry.Key] && current.levelCompleted[entry.Key];
+		}
 	}
 }
 

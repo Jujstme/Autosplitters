@@ -179,23 +179,6 @@ startup
 	for (int i = 0; i < 8; i++){
 		for (int j = 0; j < vars.levelNames[i].Length; j++) settings.Add(vars.levelNames[i][j], true, (i < 6 && j == 6) || (i == 6 && j == 1) ? "BOSS" : i > 6 ? vars.levelNames[i][j] : "Act " + (i == 6 && j == 2 ? j.ToString() : (j+1).ToString()) , worldName[0][i > 6 ? 7 : i]);
 	}
-
-	// In-game timing is used for Egg Shuttle
-	if (timer.CurrentTimingMethod == TimingMethod.RealTime) {
-		var timingMessage = MessageBox.Show (
-		"This game uses in-game timing (IGT) as the main timing method for Egg Shuttle on speedrun.com.\n"+
-		"LiveSplit is currently set to show Real Time (RTA).\n\n"+
-		"Would you like to set the timing method to Game Time?",
-		"Sonic Colors: Ultimate | LiveSplit",
-		MessageBoxButtons.YesNo,MessageBoxIcon.Question);
-		if (timingMessage == DialogResult.Yes) {
-				timer.CurrentTimingMethod = TimingMethod.GameTime;
-				MessageBox.Show("Timing method has been set to GameTime!", "Sonic Colors: Ultimate | LiveSplit", MessageBoxButtons.OK, MessageBoxIcon.Information);
-			} else if (timingMessage == DialogResult.No) {
-				timer.CurrentTimingMethod = TimingMethod.RealTime;
-				MessageBox.Show("Timing method will stay set to Real Time (RTA).", "Sonic Colors: Ultimate | LiveSplit", MessageBoxButtons.OK, MessageBoxIcon.Information);
-		}
-	}
 }
 
 update

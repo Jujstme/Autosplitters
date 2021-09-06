@@ -1,6 +1,6 @@
 // IGT timer autosplitter
 // Coding: Jujstme
-// Version: 1.2.1
+// Version: 2.0
 // contacts: just.tribe@gmail.com
 // Discord: https://discord.com/invite/XRsRwRU
 // Please do contact me if you have issues with the script
@@ -14,7 +14,6 @@ init
 
 	// Custom functions
 	vars.bitCheck = new Func<string, int, bool>((string plotEvent, int b) => ((byte)(vars.watchers[plotEvent].Current) & (1 << b)) != 0);
-	vars.Truncate = new Func<float, float>((float input) => (float)(Math.Truncate(100 * input)) / 100);
 
 	// Declare the watchers variable
 	vars.watchers = new MemoryWatcherList();
@@ -23,186 +22,230 @@ init
 	var scanner = new SignatureScanner(game, modules.First().BaseAddress, modules.First().ModuleMemorySize);
 	IntPtr ptr = IntPtr.Zero;
 
-	// IGT
+	// Run start (Any% and All Chaos Emeralds) - can be used also for signalling a reset in those two runs
 	ptr = scanner.Scan(new SigScanTarget(5,
-		"31 C0",               // xor eax,eax
-		"48 89 05 ????????")); // mov ["Sonic colors - Ultimate.exe"+52465C0],rax
+		"74 2B",                 // je "Sonic colors - Ultimate.exe"+16F3948
+		"48 8B 0D ????????"));   // mov rcx,["Sonic colors - Ultimate.exe"+52462A8]
+	if (ptr == IntPtr.Zero) throw new Exception("Could not find address - stage completion pointers");
+	vars.watchers.Add(new MemoryWatcher<byte>(new DeepPointer(ptr + 4 + memory.ReadValue<int>(ptr), 0x60, 0x120)) { Name = "runStart" });
+
+	// Current level data pointer
+	ptr = scanner.Scan(new SigScanTarget(5,
+		"31 C0",                 // xor eax,eax
+		"48 89 05 ????????"));   // mov ["Sonic colors - Ultimate.exe"+52465C0],rax
 	if (ptr == IntPtr.Zero) throw new Exception("Could not find address - IGT!");
+	// IGT
 	vars.watchers.Add(new MemoryWatcher<float>(new DeepPointer(ptr + 4 + memory.ReadValue<int>(ptr), 0x0, 0x270)) { Name = "IGT", FailAction = MemoryWatcher.ReadFailAction.SetZeroOrNull });
-
-	// Universal level completion flag
-	vars.watchers.Add(new MemoryWatcher<byte>(new DeepPointer(ptr + 4 + memory.ReadValue<int>(ptr), 0x0, 0x110)) { Name = "dummyLevelCompleted", FailAction = MemoryWatcher.ReadFailAction.SetZeroOrNull });
-
-	// Dummy runStart variable for Egg Shuttle
-	vars.watchers.Add(new MemoryWatcher<byte>(new DeepPointer(ptr + 4 + memory.ReadValue<int>(ptr), 0x0, 0xE0)) { Name = "runStart_EggShuttle", FailAction = MemoryWatcher.ReadFailAction.SetZeroOrNull });
+	// Level completion flag
+	vars.watchers.Add(new MemoryWatcher<byte>(new DeepPointer(ptr + 4 + memory.ReadValue<int>(ptr), 0x0, 0x110)) { Name = "goalRingReached", FailAction = MemoryWatcher.ReadFailAction.SetZeroOrNull });
+	// Level ID
+	vars.watchers.Add(new StringWatcher(new DeepPointer(ptr + 4 + memory.ReadValue<int>(ptr), 0x0, 0xE0), 6) { Name = "levelID" });
+	vars.watchers.Add(new MemoryWatcher<byte>(new DeepPointer(ptr + 4 + memory.ReadValue<int>(ptr), 0x0, 0xE0)) { Name = "levelID_numeric", FailAction = MemoryWatcher.ReadFailAction.SetZeroOrNull });  // Needed because StringWatcher doesn't allow to set a value to zero when the pointer becomes invalid
 
 	// Egg Shuttle data pointer
 	ptr = scanner.Scan(new SigScanTarget(5,
-		"76 0C",               // jna "Sonic Colors - Ultimate.exe"+16DF25C
-		"48 8B 0D ????????")); // mov rcx,["Sonic colors - Ultimate.exe"+5245658]
+		"76 0C",                 // jna "Sonic Colors - Ultimate.exe"+16DF25C
+		"48 8B 0D ????????"));   // mov rcx,["Sonic colors - Ultimate.exe"+5245658]
 	if (ptr == IntPtr.Zero) throw new Exception("Could not find address - Egg Shuttle data!");
 
-	// Dummy runStart2 variable for Egg Shuttle
-	vars.watchers.Add(new MemoryWatcher<bool>(new DeepPointer(ptr + 4 + memory.ReadValue<int>(ptr), 0x8, 0x38, 0x68, 0x110, 0xBC)) { Name = "runStart2_EggShuttle", FailAction = MemoryWatcher.ReadFailAction.SetZeroOrNull });
-
-	// Egg Shuttle Level ID
-	vars.watchers.Add(new MemoryWatcher<byte>(new DeepPointer(ptr + 4 + memory.ReadValue<int>(ptr), 0x8, 0x38, 0x68, 0x110, 0xB8)) { Name = "eggShuttle_levelID", FailAction = MemoryWatcher.ReadFailAction.SetZeroOrNull });
-
-	// Stage completion pointers
-	ptr = scanner.Scan(new SigScanTarget(5,
-		"74 2B",               // je "Sonic colors - Ultimate.exe"+16F3948
-		"48 8B 0D ????????")); // mov rcx,["Sonic colors - Ultimate.exe"+52462A8]
-	if (ptr == IntPtr.Zero) throw new Exception("Could not find address - stage completion pointers");
-
-	// Run start (standard mode) - can be used also for signalling a reset in the Any% run
-	vars.watchers.Add(new MemoryWatcher<byte>(new DeepPointer(ptr + 4 + memory.ReadValue<int>(ptr), 0x60, 0x120)) { Name = "runStart" });
-
-	// Level completion flags
-	int[] levelFlags = new int[11] { 0x15E, 0x15F, 0x160, 0x161, 0x162, 0x163, 0x164, 0x16B, 0x16C, 0x16D, 0x16E };
-	for (int i = 0; i < levelFlags.Length; i++) vars.watchers.Add(new MemoryWatcher<byte>(new DeepPointer(ptr + 4 + memory.ReadValue<int>(ptr), 0x60, levelFlags[i])) { Name = "levelflags" + (i+1).ToString() });
-
-	// Define a dictionary with the pointers to the game booleans.
-	// This is used to easily get to the completion status of each stage, which is data stored in single bits.
-	vars.plotBools = new Dictionary<string, Tuple<string, int>> {
-	// Tropical Resort
-	{vars.levelNames[0][0],  new Tuple<string, int>("levelflags1",  6)},
-	{vars.levelNames[0][1],  new Tuple<string, int>("levelflags1",  7)},
-	{vars.levelNames[0][2],  new Tuple<string, int>("levelflags2",  0)},
-	{vars.levelNames[0][3],  new Tuple<string, int>("levelflags2",  1)},
-	{vars.levelNames[0][4],  new Tuple<string, int>("levelflags2",  2)},
-	{vars.levelNames[0][5],  new Tuple<string, int>("levelflags2",  3)},
-	{vars.levelNames[0][6],  new Tuple<string, int>("levelflags2",  4)},
-	// Sweet Mountain
-	{vars.levelNames[1][0],  new Tuple<string, int>("levelflags2",  5)},
-	{vars.levelNames[1][1],  new Tuple<string, int>("levelflags2",  6)},
-	{vars.levelNames[1][2],  new Tuple<string, int>("levelflags2",  7)},
-	{vars.levelNames[1][3],  new Tuple<string, int>("levelflags3",  0)},
-	{vars.levelNames[1][4],  new Tuple<string, int>("levelflags3",  1)},
-	{vars.levelNames[1][5],  new Tuple<string, int>("levelflags3",  2)},
-	{vars.levelNames[1][6],  new Tuple<string, int>("levelflags3",  3)},
-	// Starlight Carnival
-	{vars.levelNames[2][0],  new Tuple<string, int>("levelflags3",  4)},
-	{vars.levelNames[2][1],  new Tuple<string, int>("levelflags3",  5)},
-	{vars.levelNames[2][2],  new Tuple<string, int>("levelflags3",  6)},
-	{vars.levelNames[2][3],  new Tuple<string, int>("levelflags3",  7)},
-	{vars.levelNames[2][4],  new Tuple<string, int>("levelflags4",  0)},
-	{vars.levelNames[2][5],  new Tuple<string, int>("levelflags4",  1)},
-	{vars.levelNames[2][6],  new Tuple<string, int>("levelflags4",  2)},
-	// Planet Wisp
-	{vars.levelNames[3][0],  new Tuple<string, int>("levelflags4",  3)},
-	{vars.levelNames[3][1],  new Tuple<string, int>("levelflags4",  4)},
-	{vars.levelNames[3][2],  new Tuple<string, int>("levelflags4",  5)},
-	{vars.levelNames[3][3],  new Tuple<string, int>("levelflags4",  6)},
-	{vars.levelNames[3][4],  new Tuple<string, int>("levelflags4",  7)},
-	{vars.levelNames[3][5],  new Tuple<string, int>("levelflags5",  0)},
-	{vars.levelNames[3][6],  new Tuple<string, int>("levelflags5",  1)},
-	// Aquarium Park
-	{vars.levelNames[4][0],  new Tuple<string, int>("levelflags5",  2)},
-	{vars.levelNames[4][1],  new Tuple<string, int>("levelflags5",  3)},
-	{vars.levelNames[4][2],  new Tuple<string, int>("levelflags5",  4)},
-	{vars.levelNames[4][3],  new Tuple<string, int>("levelflags5",  5)},
-	{vars.levelNames[4][4],  new Tuple<string, int>("levelflags5",  6)},
-	{vars.levelNames[4][5],  new Tuple<string, int>("levelflags5",  7)},
-	{vars.levelNames[4][6],  new Tuple<string, int>("levelflags6",  0)},
-	// Asteroid Coaster
-	{vars.levelNames[5][0],  new Tuple<string, int>("levelflags6",  1)},
-	{vars.levelNames[5][1],  new Tuple<string, int>("levelflags6",  2)},
-	{vars.levelNames[5][2],  new Tuple<string, int>("levelflags6",  3)},
-	{vars.levelNames[5][3],  new Tuple<string, int>("levelflags6",  4)},
-	{vars.levelNames[5][4],  new Tuple<string, int>("levelflags6",  5)},
-	{vars.levelNames[5][5],  new Tuple<string, int>("levelflags6",  6)},
-	{vars.levelNames[5][6],  new Tuple<string, int>("levelflags6",  7)},
-	// Terminal Velocity
-	{vars.levelNames[6][0],  new Tuple<string, int>("levelflags7",  0)},
-	{vars.levelNames[6][1],  new Tuple<string, int>("levelflags7",  2)},  // This is NOT a typo
-	{vars.levelNames[6][2],  new Tuple<string, int>("levelflags7",  1)},
-	// Sonic Simulator
-	{vars.levelNames[7][0],  new Tuple<string, int>("levelflags8",  4)},
-	{vars.levelNames[7][1],  new Tuple<string, int>("levelflags8",  5)},
-	{vars.levelNames[7][2],  new Tuple<string, int>("levelflags8",  6)},
-	{vars.levelNames[7][3],  new Tuple<string, int>("levelflags8",  7)},
-	{vars.levelNames[7][4],  new Tuple<string, int>("levelflags9",  0)},
-	{vars.levelNames[7][5],  new Tuple<string, int>("levelflags9",  1)},
-	{vars.levelNames[7][6],  new Tuple<string, int>("levelflags9",  2)},
-	{vars.levelNames[7][7],  new Tuple<string, int>("levelflags9",  3)},
-	{vars.levelNames[7][8],  new Tuple<string, int>("levelflags9",  4)},
-	{vars.levelNames[7][9],  new Tuple<string, int>("levelflags9",  5)},
-	{vars.levelNames[7][10], new Tuple<string, int>("levelflags9",  6)},
-	{vars.levelNames[7][11], new Tuple<string, int>("levelflags9",  7)},
-	{vars.levelNames[7][12], new Tuple<string, int>("levelflags10", 0)},
-	{vars.levelNames[7][13], new Tuple<string, int>("levelflags10", 1)},
-	{vars.levelNames[7][14], new Tuple<string, int>("levelflags10", 2)},
-	{vars.levelNames[7][15], new Tuple<string, int>("levelflags10", 3)},
-	{vars.levelNames[7][16], new Tuple<string, int>("levelflags10", 4)},
-	{vars.levelNames[7][17], new Tuple<string, int>("levelflags10", 5)},
-	{vars.levelNames[7][18], new Tuple<string, int>("levelflags10", 6)},
-	{vars.levelNames[7][19], new Tuple<string, int>("levelflags10", 7)},
-	{vars.levelNames[7][20], new Tuple<string, int>("levelflags11", 0)}};
-
-	// Egg Shuttle progressive Level IDs
-	vars.eggShuttleLevels = new string[45];
-	for (int i = 0; i < 7; i++){
-		for (int j = 0; j < vars.levelNames[i].Length; j++) vars.eggShuttleLevels[i*7 + j] = vars.levelNames[i][j];
-	}
+	// Egg Shuttle total levels (indicates the total number of stages included in Egg Shuttle mode)
+	vars.watchers.Add(new MemoryWatcher<byte>(new DeepPointer(ptr + 4 + memory.ReadValue<int>(ptr), 0x8, 0x38, 0x68, 0x110, 0x0)) { Name = "eggShuttle_totalStages", FailAction = MemoryWatcher.ReadFailAction.SetZeroOrNull });
+	// Egg Shuttle progressive level ID
+	vars.watchers.Add(new MemoryWatcher<byte>(new DeepPointer(ptr + 4 + memory.ReadValue<int>(ptr), 0x8, 0x38, 0x68, 0x110, 0xB8)) { Name = "eggShuttle_progressiveID", FailAction = MemoryWatcher.ReadFailAction.SetZeroOrNull });
+	
+	// Define Dictionary defining each stage in the game
+	vars.levels = new Dictionary<string, string> {
+		// Tropical Resort
+		{"stg110", "tropicalResortAct1"},
+		{"stg130", "tropicalResortAct2"},
+		{"stg120", "tropicalResortAct3"},
+		{"stg140", "tropicalResortAct4"},
+		{"stg150", "tropicalResortAct5"},
+		{"stg160", "tropicalResortAct6"},
+		{"stg190", "tropicalResortBoss"},
+		// Sweet Mountain
+		{"stg210", "sweetMountainAct1"},
+		{"stg230", "sweetMountainAct2"},
+		{"stg220", "sweetMountainAct3"},
+		{"stg260", "sweetMountainAct4"},
+		{"stg240", "sweetMountainAct5"},
+		{"stg250", "sweetMountainAct6"},
+		{"stg290", "sweetMountainBoss"},
+		// Starlight Carnival
+		{"stg310", "starlightCarnivalAct1"},
+		{"stg330", "starlightCarnivalAct2"},
+		{"stg340", "starlightCarnivalAct3"},
+		{"stg350", "starlightCarnivalAct4"},
+		{"stg320", "starlightCarnivalAct5"},
+		{"stg360", "starlightCarnivalAct6"},
+		{"stg390", "starlightCarnivalBoss"},
+		// Planet Wisp
+		{"stg410", "planetWispAct1"},
+		{"stg440", "planetWispAct2"},
+		{"stg450", "planetWispAct3"},
+		{"stg430", "planetWispAct4"},
+		{"stg460", "planetWispAct5"},
+		{"stg420", "planetWispAct6"},
+		{"stg490", "planetWispBoss"},
+		// Aquarium Park
+		{"stg510", "aquariumParkAct1"},
+		{"stg540", "aquariumParkAct2"},
+		{"stg550", "aquariumParkAct3"},
+		{"stg530", "aquariumParkAct4"},
+		{"stg560", "aquariumParkAct5"},
+		{"stg520", "aquariumParkAct6"},
+		{"stg590", "aquariumParkBoss"},
+		// Asteroid Coaster
+		{"stg610", "asteroidCoasterAct1"},
+		{"stg630", "asteroidCoasterAct2"},
+		{"stg640", "asteroidCoasterAct3"},
+		{"stg650", "asteroidCoasterAct4"},
+		{"stg660", "asteroidCoasterAct5"},
+		{"stg620", "asteroidCoasterAct6"},
+		{"stg690", "asteroidCoasterBoss"},
+		// Terminal Velocity
+		{"stg710", "terminalVelocityAct1"},
+		{"stg720", "terminalVelocityBoss"},
+		{"stg790", "terminalVelocityAct2"},
+		// Sonic Simulator
+		{"stgD10", "sonicSim1-1"},
+		{"stgB20", "sonicSim1-2"},
+		{"stgE50", "sonicSim1-3"},
+		{"stgD20", "sonicSim2-1"},
+		{"stgB30", "sonicSim2-2"},
+		{"stgF30", "sonicSim2-3"},
+		{"stgG10", "sonicSim3-1"},
+		{"stgG30", "sonicSim3-2"},
+		{"stgA10", "sonicSim3-3"},
+		{"stgD30", "sonicSim4-1"},
+		{"stgG20", "sonicSim4-2"},
+		{"stgC50", "sonicSim4-3"},
+		{"stgE30", "sonicSim5-1"},
+		{"stgB10", "sonicSim5-2"},
+		{"stgE40", "sonicSim5-3"},
+		{"stgG40", "sonicSim6-1"},
+		{"stgC40", "sonicSim6-2"},
+		{"stgF40", "sonicSim6-3"},
+		{"stgA30", "sonicSim7-1"},
+		{"stgE20", "sonicSim7-2"},
+		{"stgC10", "sonicSim7-3"}};
 
 	// Define basic status variables we need in the run
-	vars.totalIGT = 0f;
-	vars.isEggShuttle = "eggShuttle";
-	vars.isNotEggShuttle = "standard";
-	vars.runCategory = vars.isEggShuttle;
+	vars.totalIGT = (double)0;
+	vars.isEggShuttle = false;
 }
 
 startup
 {	
-	// Defining Worlds	
-	string[][] worldName = new string[][] {
-		new string[] {"tropicalResort", "sweetMountain", "starlightCarnival", "planetWisp", "aquariumPark", "asteroidCoaster", "terminalVelocity", "specialStages"},
-		new string[] {"Tropical Resort", "Sweet Mountain", "Starlight Carnival", "Planet Wisp", "Aquarium Park", "Asteroid Coaster", "Terminal Velocity", "Sonic Simulator"}
-	};
-
-	// Defining a codename for each stage included in the game. These names will be used as references for everything that relates to a single stage.
-	vars.levelNames = new string[][]
-	{
-		new string[] {"tropicalResortAct1", "tropicalResortAct2", "tropicalResortAct3", "tropicalResortAct4", "tropicalResortAct5", "tropicalResortAct6", "tropicalResortBoss"},                      // Tropical Resort
-		new string[] {"sweetMountainAct1", "sweetMountainAct2", "sweetMountainAct3", "sweetMountainAct4", "sweetMountainAct5", "sweetMountainAct6", "sweetMountainBoss"},                             // Sweet Mountain
-		new string[] {"starlightCarnivalAct1", "starlightCarnivalAct2", "starlightCarnivalAct3", "starlightCarnivalAct4", "starlightCarnivalAct5", "starlightCarnivalAct6", "starlightCarnivalBoss"}, // Starlight Carnival
-		new string[] {"planetWispAct1", "planetWispAct2", "planetWispAct3", "planetWispAct4", "planetWispAct5", "planetWispAct6", "planetWispBoss"},                                                  // Planet Wisp
-		new string[] {"aquariumParkAct1", "aquariumParkAct2", "aquariumParkAct3", "aquariumParkAct4", "aquariumParkAct5", "aquariumParkAct6", "aquariumParkBoss"},                                    // Aquarium Park
-		new string[] {"asteroidCoasterAct1", "asteroidCoasterAct2", "asteroidCoasterAct3", "asteroidCoasterAct4", "asteroidCoasterAct5", "asteroidCoasterAct6", "asteroidCoasterBoss"},               // Asteroid Coaster
-		new string[] {"terminalVelocityAct1", "terminalVelocityBoss", "terminalVelocityAct2"},                                                                                                        // Terminal Velocity
-		new string[] {"1-1", "1-2", "1-3", "2-1", "2-2", "2-3", "3-1", "3-2", "3-3", "4-1", "4-2", "4-3", "5-1", "5-2", "5-3", "6-1", "6-2", "6-3", "7-1", "7-2", "7-3"}                              // Special Stages
-	};
-
-	// Add settings for each level, using the codenames from above
 	settings.Add("levelSplitting", true, "Automatic splitting configuration");
-	for (int i = 0; i < worldName[0].Length; i++) settings.Add(worldName[0][i], true, worldName[1][i], "levelSplitting");
-	for (int i = 0; i < 8; i++){
-		for (int j = 0; j < vars.levelNames[i].Length; j++) settings.Add(vars.levelNames[i][j], true, (i < 6 && j == 6) || (i == 6 && j == 1) ? "BOSS" : i > 6 ? vars.levelNames[i][j] : "Act " + (i == 6 && j == 2 ? j.ToString() : (j+1).ToString()) , worldName[0][i > 6 ? 7 : i]);
-	}
+	
+	// Tropical Resort
+	settings.Add("tropicalResort", true, "Tropical Resort", "levelSplitting");
+	settings.Add("tropicalResortAct1", true, "Act 1", "tropicalResort");
+	settings.Add("tropicalResortAct2", true, "Act 2", "tropicalResort");
+	settings.Add("tropicalResortAct3", true, "Act 3", "tropicalResort");
+	settings.Add("tropicalResortAct4", true, "Act 4", "tropicalResort");
+	settings.Add("tropicalResortAct5", true, "Act 5", "tropicalResort");
+	settings.Add("tropicalResortAct6", true, "Act 6", "tropicalResort");
+	settings.Add("tropicalResortBoss", true, "BOSS",  "tropicalResort");
+
+	// Sweet Mountain
+	settings.Add("sweetMountain", true, "Sweet Mountain", "levelSplitting");
+	settings.Add("sweetMountainAct1", true, "Act 1", "sweetMountain");
+	settings.Add("sweetMountainAct2", true, "Act 2", "sweetMountain");
+	settings.Add("sweetMountainAct3", true, "Act 3", "sweetMountain");
+	settings.Add("sweetMountainAct4", true, "Act 4", "sweetMountain");
+	settings.Add("sweetMountainAct5", true, "Act 5", "sweetMountain");
+	settings.Add("sweetMountainAct6", true, "Act 6", "sweetMountain");
+	settings.Add("sweetMountainBoss", true, "BOSS",  "sweetMountain");
+
+	// Starlight Carnival
+	settings.Add("starlightCarnival", true, "Starlight Carnival", "levelSplitting");
+	settings.Add("starlightCarnivalAct1", true, "Act 1", "starlightCarnival");
+	settings.Add("starlightCarnivalAct2", true, "Act 2", "starlightCarnival");
+	settings.Add("starlightCarnivalAct3", true, "Act 3", "starlightCarnival");
+	settings.Add("starlightCarnivalAct4", true, "Act 4", "starlightCarnival");
+	settings.Add("starlightCarnivalAct5", true, "Act 5", "starlightCarnival");
+	settings.Add("starlightCarnivalAct6", true, "Act 6", "starlightCarnival");
+	settings.Add("starlightCarnivalBoss", true, "BOSS",  "starlightCarnival");
+
+	// Planet Wisp
+	settings.Add("planetWisp", true, "Planet Wisp", "levelSplitting");
+	settings.Add("planetWispAct1", true, "Act 1", "planetWisp");
+	settings.Add("planetWispAct2", true, "Act 2", "planetWisp");
+	settings.Add("planetWispAct3", true, "Act 3", "planetWisp");
+	settings.Add("planetWispAct4", true, "Act 4", "planetWisp");
+	settings.Add("planetWispAct5", true, "Act 5", "planetWisp");
+	settings.Add("planetWispAct6", true, "Act 6", "planetWisp");
+	settings.Add("planetWispBoss", true, "BOSS",  "planetWisp");
+
+	// Aquarium Park
+	settings.Add("aquariumPark", true, "Aquarium Park", "levelSplitting");
+	settings.Add("aquariumParkAct1", true, "Act 1", "aquariumPark");
+	settings.Add("aquariumParkAct2", true, "Act 2", "aquariumPark");
+	settings.Add("aquariumParkAct3", true, "Act 3", "aquariumPark");
+	settings.Add("aquariumParkAct4", true, "Act 4", "aquariumPark");
+	settings.Add("aquariumParkAct5", true, "Act 5", "aquariumPark");
+	settings.Add("aquariumParkAct6", true, "Act 6", "aquariumPark");
+	settings.Add("aquariumParkBoss", true, "BOSS",  "aquariumPark");
+
+	// Asteroid Coaster
+	settings.Add("asteroidCoaster", true, "Asteroid Coaster", "levelSplitting");
+	settings.Add("asteroidCoasterAct1", true, "Act 1", "asteroidCoaster");
+	settings.Add("asteroidCoasterAct2", true, "Act 2", "asteroidCoaster");
+	settings.Add("asteroidCoasterAct3", true, "Act 3", "asteroidCoaster");
+	settings.Add("asteroidCoasterAct4", true, "Act 4", "asteroidCoaster");
+	settings.Add("asteroidCoasterAct5", true, "Act 5", "asteroidCoaster");
+	settings.Add("asteroidCoasterAct6", true, "Act 6", "asteroidCoaster");
+	settings.Add("asteroidCoasterBoss", true, "BOSS",  "asteroidCoaster");
+
+	// Terminal Velocity
+	settings.Add("terminalVelocity", true, "Asteroid Coaster", "levelSplitting");
+	settings.Add("terminalVelocityAct1", true, "Act 1", "terminalVelocity");
+	settings.Add("terminalVelocityBoss", true, "BOSS",  "terminalVelocity");
+	settings.Add("terminalVelocityAct2", true, "Act 2", "terminalVelocity");
+
+	// Sonic Simulator
+	settings.Add("sonicSimulator", true, "Sonic Simulator", "levelSplitting");
+	settings.Add("sonicSim1-1", true, "1-1", "sonicSimulator");
+	settings.Add("sonicSim1-2", true, "1-2", "sonicSimulator");
+	settings.Add("sonicSim1-3", true, "1-3", "sonicSimulator");
+	settings.Add("sonicSim2-1", true, "2-1", "sonicSimulator");
+	settings.Add("sonicSim2-2", true, "2-2", "sonicSimulator");
+	settings.Add("sonicSim2-3", true, "2-3", "sonicSimulator");
+	settings.Add("sonicSim3-1", true, "3-1", "sonicSimulator");
+	settings.Add("sonicSim3-2", true, "3-2", "sonicSimulator");
+	settings.Add("sonicSim3-3", true, "3-3", "sonicSimulator");
+	settings.Add("sonicSim4-1", true, "4-1", "sonicSimulator");
+	settings.Add("sonicSim4-2", true, "4-2", "sonicSimulator");
+	settings.Add("sonicSim4-3", true, "4-3", "sonicSimulator");
+	settings.Add("sonicSim5-1", true, "5-1", "sonicSimulator");
+	settings.Add("sonicSim5-2", true, "5-2", "sonicSimulator");
+	settings.Add("sonicSim5-3", true, "5-3", "sonicSimulator");
+	settings.Add("sonicSim6-1", true, "6-1", "sonicSimulator");
+	settings.Add("sonicSim6-2", true, "6-2", "sonicSimulator");
+	settings.Add("sonicSim6-3", true, "6-3", "sonicSimulator");
+	settings.Add("sonicSim7-1", true, "7-1", "sonicSimulator");
+	settings.Add("sonicSim7-2", true, "7-2", "sonicSimulator");
+	settings.Add("sonicSim7-3", true, "7-3", "sonicSimulator");
 }
 
 update
 {
 	// Update watchers
-	vars.watchers.UpdateAll(game);
+	vars.watchers.UpdateAll(game); 
 
 	// The game calculates the IGT for each stage by simply truncating the float value to the second decimal
-	vars.watchers["IGT"].Current = vars.Truncate(vars.watchers["IGT"].Current);
-
-	// Calculating the completion bools for each level in the game
-	current.levelCompleted = new Dictionary<string, bool>();
-	foreach (var entry in vars.plotBools) current.levelCompleted.Add(entry.Key, vars.bitCheck(entry.Value.Item1, entry.Value.Item2));
-
-	// "Universal" level completion flag - becomes true when you complete a level, regardless of the level or game mode
-	current.dummyLevelCompleted = vars.bitCheck("dummyLevelCompleted", 5);
+	current.gameIGT = Convert.ToDouble(Math.Truncate(vars.watchers["IGT"].Current * 100) / 100);
+	
+	// Level completion flag - becomes true when you complete a level, regardless of the level or game mode
+	current.goalRingReached = vars.bitCheck("goalRingReached", 5);
 
 	// Variables that need to be managed only when the run hasn't started yet
 	if (timer.CurrentPhase == TimerPhase.NotRunning)
 	{
-		// If the timer is stopped (for example when you reset a run) make sure to reset the IGT variable
-		vars.totalIGT = 0f;
-		// If Tropical Resort Act 1 is marked as not completed at the start of the run, the game assumes you are running Any%. Otherwise is assumes you are running Egg Shuttle by default.
-		vars.runCategory = current.levelCompleted[vars.levelNames[0][0]] ? vars.isEggShuttle : vars.isNotEggShuttle;
+		vars.totalIGT = (double)0; // If the timer is stopped (for example when you reset a run) make sure to reset the IGT variable
+		vars.isEggShuttle = vars.watchers["eggShuttle_totalStages"].Current > 0; // Check which game mode you're in
 	}
 
 	// IGT logic: Use an internal totalIGT variable in which we will store the accumulated IGT every time the game IGT resets
@@ -211,12 +254,11 @@ update
 
 start
 {
-	if (vars.runCategory == vars.isEggShuttle) {
-		vars.ShouldStart = vars.watchers["runStart_EggShuttle"].Current == 115 && vars.watchers["runStart_EggShuttle"].Changed && vars.watchers["runStart2_EggShuttle"].Current;
+	if (vars.isEggShuttle) {
+		return vars.watchers["levelID"].Current == "stg110" && vars.watchers["levelID_numeric"].Old == 0 && vars.watchers["levelID_numeric"].Changed;
 	} else {
-		vars.ShouldStart = vars.watchers["runStart"].Old == 35 && vars.watchers["runStart"].Current == 110;
+		return vars.watchers["runStart"].Old == 35 && vars.watchers["runStart"].Current == 110;
 	}
-	return vars.ShouldStart;
 }
 
 reset
@@ -226,24 +268,20 @@ reset
 
 split
 {
-	if (vars.runCategory == vars.isEggShuttle) {
-		if (vars.watchers["eggShuttle_levelID"].Current == vars.watchers["eggShuttle_levelID"].Old + 1 && settings[vars.eggShuttleLevels[vars.watchers["eggShuttle_levelID"].Old]] && vars.watchers["eggShuttle_levelID"].Current != 45) {
-			return true;
-		} else if (vars.watchers["eggShuttle_levelID"].Current == 44 && current.dummyLevelCompleted && !old.dummyLevelCompleted && settings[vars.eggShuttleLevels[44]]) { 
-			return true;
-		}
+	// If in Terminal Velocity Act 2, or if in the last stage of Egg Shuttle, you need to split as soon as the timer freezes
+	if (vars.watchers["levelID"].Old == "stg790") {
+		return current.goalRingReached && !old.goalRingReached && settings["terminalVelocityAct2"];
+	} else if (vars.isEggShuttle && vars.watchers["eggShuttle_progressiveID"].Current == vars.watchers["eggShuttle_totalStages"].Current - 1) {
+		return current.goalRingReached && !old.goalRingReached && settings[vars.levels[vars.watchers["levelID"].Current]];
 	} else {
-		foreach (var entry in vars.plotBools)
-		{
-			if (old.levelCompleted[entry.Key] == current.levelCompleted[entry.Key]) continue;
-			return settings[entry.Key] && current.levelCompleted[entry.Key];
-		}
+	// Otherwise, split when you leave the results screen
+		return !current.goalRingReached && old.goalRingReached && settings[vars.levels[vars.watchers["levelID"].Old]];
 	}
 }
 
 gameTime
 {
-	return TimeSpan.FromSeconds(Convert.ToDouble(vars.totalIGT + vars.watchers["IGT"].Current));
+	return TimeSpan.FromSeconds(vars.totalIGT + current.gameIGT);
 }
 
 isLoading

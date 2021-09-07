@@ -236,7 +236,7 @@ update
 	vars.watchers.UpdateAll(game); 
 
 	// The game calculates the IGT for each stage by simply truncating the float value to the second decimal
-	current.gameIGT = (float)(Math.Truncate(100 * vars.watchers["IGT"].Current)) / 100;
+	vars.watchers["IGT"].Current = (float)(Math.Truncate(100 * vars.watchers["IGT"].Current)) / 100;
 	
 	// Level completion flag - becomes true when you complete a level, regardless of the level or game mode
 	current.goalRingReached = vars.bitCheck("goalRingReached", 5);
@@ -281,7 +281,7 @@ split
 
 gameTime
 {
-	return TimeSpan.FromSeconds((double)(vars.totalIGT + current.gameIGT));
+	return TimeSpan.FromSeconds((double)(vars.totalIGT + vars.watchers["IGT"].Current));
 }
 
 isLoading

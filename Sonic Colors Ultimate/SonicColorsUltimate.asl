@@ -271,8 +271,8 @@ split
 	// If in Terminal Velocity Act 2, or if in the last stage of Egg Shuttle, you need to split as soon as the timer freezes
 	if (vars.watchers["levelID"].Old == "stg720") {
 		return current.goalRingReached && !old.goalRingReached && settings["terminalVelocityAct2"];
-	} else if (vars.isEggShuttle && vars.watchers["eggShuttle_progressiveID"].Current == vars.watchers["eggShuttle_totalStages"].Current - 1) {
-		return current.goalRingReached && !old.goalRingReached && settings[vars.levels[vars.watchers["levelID"].Current]];
+	//} else if (vars.isEggShuttle && vars.watchers["eggShuttle_progressiveID"].Current == vars.watchers["eggShuttle_totalStages"].Current - 1) {
+	//	return current.goalRingReached && !old.goalRingReached && settings[vars.levels[vars.watchers["levelID"].Current]];
 	} else {
 	// Otherwise, split when you leave the results screen
 		return !current.goalRingReached && old.goalRingReached && settings[vars.levels[vars.watchers["levelID"].Old]];

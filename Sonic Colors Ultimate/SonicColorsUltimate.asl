@@ -105,8 +105,8 @@ init
 		{"stg690", "asteroidCoasterBoss"},
 		// Terminal Velocity
 		{"stg710", "terminalVelocityAct1"},
-		{"stg720", "terminalVelocityBoss"},
-		{"stg790", "terminalVelocityAct2"},
+		{"stg790", "terminalVelocityBoss"},
+		{"stg720", "terminalVelocityAct2"},
 		// Sonic Simulator
 		{"stgD10", "sonicSim1-1"},
 		{"stgB20", "sonicSim1-2"},
@@ -269,7 +269,7 @@ reset
 split
 {
 	// If in Terminal Velocity Act 2, or if in the last stage of Egg Shuttle, you need to split as soon as the timer freezes
-	if (vars.watchers["levelID"].Old == "stg790") {
+	if (vars.watchers["levelID"].Old == "stg720") {
 		return current.goalRingReached && !old.goalRingReached && settings["terminalVelocityAct2"];
 	} else if (vars.isEggShuttle && vars.watchers["eggShuttle_progressiveID"].Current == vars.watchers["eggShuttle_totalStages"].Current - 1) {
 		return current.goalRingReached && !old.goalRingReached && settings[vars.levels[vars.watchers["levelID"].Current]];

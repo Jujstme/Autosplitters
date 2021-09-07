@@ -131,7 +131,7 @@ init
 		{"stgC10", "sonicSim7-3"}};
 
 	// Define basic status variables we need in the run
-	vars.totalIGT = (double)0;
+	vars.totalIGT = 0f;
 	vars.isEggShuttle = false;
 }
 
@@ -236,7 +236,7 @@ update
 	vars.watchers.UpdateAll(game); 
 
 	// The game calculates the IGT for each stage by simply truncating the float value to the second decimal
-	current.gameIGT = Convert.ToDouble(Math.Truncate(vars.watchers["IGT"].Current * 100) / 100);
+	current.gameIGT = (float)(Math.Truncate(100 * vars.watchers["IGT"].Current)) / 100;
 	
 	// Level completion flag - becomes true when you complete a level, regardless of the level or game mode
 	current.goalRingReached = vars.bitCheck("goalRingReached", 5);
@@ -244,7 +244,7 @@ update
 	// Variables that need to be managed only when the run hasn't started yet
 	if (timer.CurrentPhase == TimerPhase.NotRunning)
 	{
-		vars.totalIGT = (double)0; // If the timer is stopped (for example when you reset a run) make sure to reset the IGT variable
+		vars.totalIGT = 0f; // If the timer is stopped (for example when you reset a run) make sure to reset the IGT variable
 		vars.isEggShuttle = vars.watchers["eggShuttle_totalStages"].Current > 0; // Check which game mode you're in
 	}
 
@@ -281,7 +281,7 @@ split
 
 gameTime
 {
-	return TimeSpan.FromSeconds(vars.totalIGT + current.gameIGT);
+	return TimeSpan.FromSeconds((double)(vars.totalIGT + current.gameIGT));
 }
 
 isLoading

@@ -126,7 +126,7 @@ startup
 	// Asteroid Coaster
 	settings.Add("asteroidCoaster", true, "Asteroid Coaster", "levelSplitting"); for (int i = 35; i < 42; i++) settings.Add(vars.orderedLevels[i], true, i == 41 ? "BOSS" : "Act " + (i-34).ToString(), "asteroidCoaster");
 	// Terminal Velocity
-	settings.Add("terminalVelocity", true, "Asteroid Coaster", "levelSplitting"); for (int i = 42; i < 45; i++) settings.Add(vars.orderedLevels[i], true, i == 43 ? "BOSS" : i == 44 ? "Act 2" : "Act 1", "terminalVelocity");
+	settings.Add("terminalVelocity", true, "Terminal Velocity", "levelSplitting"); for (int i = 42; i < 45; i++) settings.Add(vars.orderedLevels[i], true, i == 43 ? "BOSS" : i == 44 ? "Act 2" : "Act 1", "terminalVelocity");
 	// Sonic Simulator
 	settings.Add("sonicSimulator", true, "Sonic Simulator", "levelSplitting"); for (int i = 45; i < 66; i++) settings.Add(vars.orderedLevels[i], true, vars.orderedLevels[i].Substring(vars.orderedLevels[i].IndexOf("m") + 1).Replace('-', '—'), "sonicSimulator");
 }

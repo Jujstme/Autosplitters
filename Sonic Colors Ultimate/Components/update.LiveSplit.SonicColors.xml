@@ -1,5 +1,15 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <updates>
+	<update version="1.0.2">
+		<files>
+			<file path="Components/LiveSplit.SonicColors.dll" status="changed" />
+		</files>
+		<changelog>
+			<change>Updated split logic</change>
+			<change>Code optimization</change>
+			<change>Improved settings menu</change>
+		</changelog>
+	</update>
 	<update version="1.0.1">
 		<files>
 			<file path="Components/LiveSplit.SonicColors.dll" status="changed" />

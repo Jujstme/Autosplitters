@@ -1,5 +1,13 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <updates>
+	<update version="1.0.3">
+		<files>
+			<file path="Components/LiveSplit.SonicColors.dll" status="changed" />
+		</files>
+		<changelog>
+			<change>Fixed a stupid bug crashing livesplit when the game is launched with the autosplitter already active</change>
+		</changelog>
+	</update>
 	<update version="1.0.2">
 		<files>
 			<file path="Components/LiveSplit.SonicColors.dll" status="changed" />

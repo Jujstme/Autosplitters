@@ -36,7 +36,15 @@ namespace LiveSplit.SonicColors
         {
             if (game == null || game.HasExited)
             {
-                if (!HookGameProcess()) return;
+                try
+                {
+                    if (!HookGameProcess()) return;
+                }
+                catch
+                {
+                    game = null;
+                    return;
+                }
             }
             UpdateGameMemory();
             UpdateScript();

@@ -1,5 +1,13 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <updates>
+	<update version="1.0.3.2">
+		<files>
+			<file path="Components/LiveSplit.SonicColors.dll" status="changed" />
+		</files>
+		<changelog>
+			<change>Added autostart when loading Sonic Simulator 1-1</change>
+		</changelog>
+	</update>
 	<update version="1.0.3.1">
 		<files>
 			<file path="Components/LiveSplit.SonicColors.dll" status="changed" />

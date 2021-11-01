@@ -109,7 +109,8 @@ namespace LiveSplit.SonicColors
                     startTrigger = (string)vars.watchers["levelID"].Current == Levels.TropicalResortAct1 && (byte)vars.watchers["levelID_numeric"].Old == 0 && vars.watchers["levelID_numeric"].Changed;
                     break;
                 case false:
-                    startTrigger = (byte)vars.watchers["runStart"].Old == 35 && (byte)vars.watchers["runStart"].Current == 110 && (sbyte)vars.watchers["TR1rank"].Current == -1;
+                    startTrigger = ((byte)vars.watchers["runStart"].Old == 35 && (byte)vars.watchers["runStart"].Current == 110 && (sbyte)vars.watchers["TR1rank"].Current == -1) ||
+                        ((byte)vars.watchers["levelID_numeric"].Old == 0 && vars.watchers["levelID_numeric"].Changed && (string)vars.watchers["levelID"].Current == Levels.SonicSimulator1_1);
                     break;
             }
 

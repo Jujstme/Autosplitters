@@ -8,7 +8,8 @@ init
     if (!game.Is64Bit()) throw new Exception("Not a 64bit application! Check if you're running the Legendary Edition of the game!");
 
     // Determine which game you're currently running and sets the variables accordingly
-    switch (memory.ProcessName) {
+    switch (memory.ProcessName)
+	{
         case "MassEffect1" : version = "Mass Effect 1 LE"; vars.trilogy = 1; break;
         case "MassEffect2" : version = "Mass Effect 2 LE"; vars.trilogy = 2; break;
         case "MassEffect3" : version = "Mass Effect 3 LE"; vars.trilogy = 3; break;
@@ -36,132 +37,175 @@ init
 
 
     // Game-specific variables
+	switch ((byte)vars.trilogy)
+	{
+		case 1:
+			// Mass Effect 1 uses an additional variable for loading messages
+			ptr = scanner.Scan(new SigScanTarget(2,
+				"83 3D ???????? 00",  // cmp dword ptr [MassEffect1.exe+17775B8],00  <----
+				"74 20",              // je MassEffect1.exe+2596F1
+				"48 8B 03"));         // mov rax,[rbx]
+			if (ptr == IntPtr.Zero) throw new Exception("Could not find address!");
+			vars.watchers.Add(new MemoryWatcher<bool>(new DeepPointer(targetAddress(ptr, 5))) { Name = "isLoading2" }); // This value is 1 in load messages, otherwise it's 0 
+			
+			// Mass Effect 1 plot bools for automatic splitting
+			ptr = scanner.Scan(new SigScanTarget(11,
+				"4C 8B 30",             // mov r14,[rax]
+				"4D 85 F6",             // test r14,r14
+				"74 4A",                // je MassEffect1.exe+9D17CE
+				"48 8B 15 ????????"));  // mov rdx,[MassEffect1.exe+1B9F588]  <----
+			if (ptr == IntPtr.Zero) throw new Exception("Could not find address!");
+			
+			// Main story progression
+			plotBools.Add("GameStarted", 0x1B5);        // self-explanatory
+			plotBools.Add("edenPrimeStart", 0x1BB);     // Used for signalling Eden Prime mission start
+			plotBools.Add("edenPrimeCompleted", 0x139); // For Eden Prime mission completion
+			plotBools.Add("storyProgress", 0x362);      // For story progression after leaving the Citadel
+			plotBools.Add("huddles", 0x1FD);            // Mission debriefings
+			plotBools.Add("finalBattleStart", 0x184);   // Used for signalling whether the last battkle against Saren has started
+			
+			foreach(KeyValuePair<string, int> entry in plotBools) vars.watchers.Add(new MemoryWatcher<byte>(new DeepPointer(targetAddress(ptr, 4), 0x174, 0xAFC, 0x60, entry.Value)) { Name = entry.Key });
+			
+			// Saren's Health  - largely untested, might break
+			ptr = scanner.Scan(new SigScanTarget(3,
+				"48 8B 0D ????????",   // mov rcx,[MassEffect1.exe+1B9F260]
+				"48 3B CD"));          // cmp rcx,rbp
+			if (ptr == IntPtr.Zero) throw new Exception("Could not find address!");
+			vars.watchers.Add(new MemoryWatcher<float>(new DeepPointer(targetAddress(ptr, 4), 0x1AC, 0xB2C, 0x8A8, 0x18, 0x204, 0x310, 0x380)) { Name = "SarensHealth", FailAction = MemoryWatcher.ReadFailAction.SetZeroOrNull });
+			
+			// XYZ position
+			ptr = scanner.Scan(new SigScanTarget(23,
+				"0F1F 44 00 00",        // nop dword ptr [rax+rax+00]
+				"85 DB",                // test ebx,ebx
+				"78 3A",                // js MassEffect1.exe+41BBDE
+				"3B 1D ????????",       // cmp ebx,[MassEffect1.exe+17B2308]
+				"7D 32",                // jnl MassEffect1.exe+41BBDE
+				"48 63 FB",             // movsxd rdi,ebx
+				"48 8B 05 ????????"));  // mov rax,[MassEffect1.exe+1782300]  <----
+			if (ptr == IntPtr.Zero) throw new Exception("Could not find address!");
+			plotBools = new Dictionary<string, int>();
+			plotBools.Add("XPOS", 0x108); // XPOS
+			plotBools.Add("YPOS", 0x10C); // YPOS
+			plotBools.Add("ZPOS", 0x110); // ZPOS
+			foreach(KeyValuePair<string, int> entry in plotBools) vars.watchers.Add(new MemoryWatcher<uint>(new DeepPointer(targetAddress(ptr, 4), 0x0, 0x78, entry.Value)) { Name = entry.Key });
+			break;
+			
+		case 2:
+		    // Mass Effect 2 plot bools for automatic splitting
+			ptr = scanner.Scan(new SigScanTarget(8,
+				"48 85 C0",             // test rax,rax
+				"74 42",                // je MassEffect2.exe+6DAA15
+				"4C 8B 05 ????????"));  // mov r8,[MassEffect2.exe+1B675B0]  <----
+			if (ptr == IntPtr.Zero) throw new Exception("Could not find address!");
 
-    if (vars.trilogy == 1) {
-    // Mass Effect 1 uses an additional variable for loading messages
-        ptr = scanner.Scan(new SigScanTarget(2,
-            "83 3D ???????? 00",  // cmp dword ptr [MassEffect1.exe+17775B8],00  <----
-            "74 20",              // je MassEffect1.exe+2596F1
-            "48 8B 03"));         // mov rax,[rbx]
-        if (ptr == IntPtr.Zero) throw new Exception("Could not find address!");
-        vars.watchers.Add(new MemoryWatcher<bool>(new DeepPointer(targetAddress(ptr, 5))) { Name = "isLoading2" }); // This value is 1 in load messages, otherwise it's 0 
-    }
+			// Main story progression 
+			plotBools.Add("plotPrologue", 0x14A);      // Used for prologue mission
+			plotBools.Add("plotCR0", 0x43);            // CR0, CR1, CR2 and CR3 are the CRitical missions that drive the story forward (Freedom's progress, Horizon, Collector Ship and Normany crew abduction)
+			plotBools.Add("plotCR123", 0x27);          // CR0, CR1, CR2 and CR3 are the CRitical missions that drive the story forward (Freedom's progress, Horizon, Collector Ship and Normany crew abduction)
+			plotBools.Add("plotIFF", 0xB3);            // Corresponds to Legion acquisition, which is one and the same with the reaper IFF mission
+			plotBools.Add("crewAbduct", 0x12E);        // Used in place of CR3 for "reasons"
+			plotBools.Add("suicideOculus", 0xFE);      // Suicide mission: destroying the oculus
+			plotBools.Add("suicideValve", 0x16F);      // Suicide mission: making it through the ventilation system
+			plotBools.Add("suicideBubble", 0x170);     // Suicide mission: making it through the biotic bubble part
+			plotBools.Add("suicideReaper", 0x1BC);     // Used for signalling the end of the game
 
-    if (vars.trilogy == 2) {
-    // Mass Effect 2 plot bools for automatic splitting
-        ptr = scanner.Scan(new SigScanTarget(8,
-            "48 85 C0",             // test rax,rax
-            "74 42",                // je MassEffect2.exe+6DAA15
-            "4C 8B 05 ????????"));  // mov r8,[MassEffect2.exe+1B675B0]  <----
-        if (ptr == IntPtr.Zero) throw new Exception("Could not find address!");
+			// Dossiers
+			plotBools.Add("crewAcq1", 0x278);          // For Mordin, Jack, Garrus, Tali
+			plotBools.Add("crewAcq2", 0x4D);           // For Grunt
+			plotBools.Add("crewAcq3", 0x279);          // For Thane
+			plotBools.Add("crewAcq4", 0x47);           // For Samara
+			plotBools.Add("crewAcq5", 0x32);           // For Zaeed
+			plotBools.Add("crewAcq6", 0xB9);           // For Kasumi
 
-        // Main story progression 
-        plotBools.Add("plotPrologue", 0x14A);      // Used for prologue mission
-        plotBools.Add("plotCR0", 0x43);            // CR0, CR1, CR2 and CR3 are the CRitical missions that drive the story forward (Freedom's progress, Horizon, Collector Ship and Normany crew abduction)
-        plotBools.Add("plotCR123", 0x27);          // CR0, CR1, CR2 and CR3 are the CRitical missions that drive the story forward (Freedom's progress, Horizon, Collector Ship and Normany crew abduction)
-        plotBools.Add("plotIFF", 0xB3);            // Corresponds to Legion acquisition, which is one and the same with the reaper IFF mission
-        plotBools.Add("crewAbduct", 0x12E);        // Used in place of CR3 for "reasons"
-        plotBools.Add("suicideOculus", 0xFE);      // Suicide mission: destroying the oculus
-        plotBools.Add("suicideValve", 0x16F);      // Suicide mission: making it through the ventilation system
-        plotBools.Add("suicideBubble", 0x170);     // Suicide mission: making it through the biotic bubble part
-        plotBools.Add("suicideReaper", 0x1BC);     // Used for signalling the end of the game
+			// Loyalty missions
+			plotBools.Add("loyaltyMissions1", 0xBB);   // Loyalty mission status for Miranda, Jacob, Jack, Legion, Kasumi, Garrus, Thane and Tali
+			plotBools.Add("loyaltyMissions2", 0xBC);   // Loyalty mission status for Mordin, Grunt, Samara/Morinth and Zaeed
 
-        // Dossiers
-        plotBools.Add("crewAcq1", 0x278);          // For Mordin, Jack, Garrus, Tali
-        plotBools.Add("crewAcq2", 0x4D);           // For Grunt
-        plotBools.Add("crewAcq3", 0x279);          // For Thane
-        plotBools.Add("crewAcq4", 0x47);           // For Samara
-        plotBools.Add("crewAcq5", 0x32);           // For Zaeed
-        plotBools.Add("crewAcq6", 0xB9);           // For Kasumi
+			// N7 Missions
+			plotBools.Add("WMF", 0x1A8);               // N7: Wrecked Merchant Freighter
+			plotBools.Add("ARS", 0x225);               // N7: Abandoned Research Station
+			plotBools.Add("ADS", 0x18C);               // N7: Archeological Dig Site
+			plotBools.Add("MSVE", 0x156);              // N7: MSV Estevanico
+			plotBools.Add("ESD", 0x28A);               // N7: Eclipse Smuggling Depot (and N7: Endangered Research Station)
+			plotBools.Add("LO", 0x288);                // N7: Lost Operative
 
-        // Loyalty missions
-        plotBools.Add("loyaltyMissions1", 0xBB);   // Loyalty mission status for Miranda, Jacob, Jack, Legion, Kasumi, Garrus, Thane and Tali
-        plotBools.Add("loyaltyMissions2", 0xBC);   // Loyalty mission status for Mordin, Grunt, Samara/Morinth and Zaeed
+			// Address checks put in place for avoiding unwanted splitting
+			plotBools.Add("WakeUp", 0x119);            // Bool for the "wake up" scene at Lazarus Lab
 
-        // N7 Missions
-        plotBools.Add("WMF", 0x1A8);               // N7: Wrecked Merchant Freighter
-        plotBools.Add("ARS", 0x225);               // N7: Abandoned Research Station
-        plotBools.Add("ADS", 0x18C);               // N7: Archeological Dig Site
-        plotBools.Add("MSVE", 0x156);              // N7: MSV Estevanico
-        plotBools.Add("ESD", 0x28A);               // N7: Eclipse Smuggling Depot (and N7: Endangered Research Station)
-        plotBools.Add("LO", 0x288);                // N7: Lost Operative
-
-        // Address checks put in place for avoiding unwanted splitting
-        plotBools.Add("WakeUp", 0x119);            // Bool for the "wake up" scene at Lazarus Lab
-
-        foreach(KeyValuePair<string, int> entry in plotBools) vars.watchers.Add(new MemoryWatcher<byte>(new DeepPointer(targetAddress(ptr, 4), 0x16C, 0xA34, 0x60, entry.Value)) { Name = entry.Key });
-
-
-        // XYZ position
-        ptr = scanner.Scan(new SigScanTarget(21,
-            "41 8B DC",             // mov ebx,r12d
-            "85 DB",                // test ebx,ebx
-            "78 3A",                // js MassEffect2.exe+598505
-            "3B 1D ????????",       // cmp ebx,[MassEffect2.exe+1760018
-            "7D 32",                // jnl MassEffect2.exe+598505
-            "48 63 FB",             // movsxd rdi,ebx
-            "48 8B 05 ????????"));  // mov rax,[MassEffect2.exe+1760010]  <----
-        if (ptr == IntPtr.Zero) throw new Exception("Could not find address!");
-        plotBools = new Dictionary<string, int>();
-        plotBools.Add("XPOS", 0x118);              // XPOS
-        plotBools.Add("YPOS", 0x11C);              // YPOS
-        plotBools.Add("ZPOS", 0x120);              // ZPOS
-        foreach(KeyValuePair<string, int> entry in plotBools) vars.watchers.Add(new MemoryWatcher<uint>(new DeepPointer(targetAddress(ptr, 4), 0x0, 0x78, entry.Value)) { Name = entry.Key });
-    }
-
-    if (vars.trilogy == 3) {
-    // Mass Effect 3 plot bools for automatic splitting
-        ptr = scanner.Scan(new SigScanTarget(13,
-            "C3",                   // ret
-            "CC",                   // int 3
-            "CC",                   // int 3
-            "CC",                   // int 3
-            "CC",                   // int 3
-            "CC",                   // int 3
-            "48 83 EC 28",          // sub rsp,28
-            "48 8B 0D ????????",    // mov rcx,[MassEffect3.exe+1CBBC70]   <----
-            "48 85 C9",             // test rcx,rcx
-            "75 1F",                // jne MassEffect3.exe+AD241F
-            "48 8D 0D ????????"));  // lea rcx,[MassEffect3.exe+10AE638]
-        if (ptr == IntPtr.Zero) throw new Exception("Could not find address!");
-
-        // Story progression
-        plotBools.Add("prologueEarth", 0x9ED);
-        plotBools.Add("priorityMars", 0xA09);
-        plotBools.Add("priorityCitadel", 0xA14);
-        plotBools.Add("priorityPalaven", 0x924);
-        plotBools.Add("prioritySurkesh", 0x8A9);
-        plotBools.Add("preTuchanka", 0x940);
-        plotBools.Add("priorityTuchanka", 0x8FA);
-        plotBools.Add("priorityCitadelCerberus", 0x983);
-        plotBools.Add("rannochKoris", 0x934);
-        plotBools.Add("rannochGethServer", 0x935);
-        plotBools.Add("priorityRannoch", 0x967);
-        plotBools.Add("priorityThessia", 0x906);
-        plotBools.Add("priorityHorizonME3", 0x989);
-        plotBools.Add("priorityCerberusHead", 0x9DD);
-        plotBools.Add("priorityEarth", 0xA70);
-        plotBools.Add("priorityEndingME3", 0xAF3);
-
-        foreach(KeyValuePair<string, int> entry in plotBools) vars.watchers.Add(new MemoryWatcher<byte>(new DeepPointer(targetAddress(ptr, 4), 0x13C, 0xF0, entry.Value)) { Name = entry.Key });
+			foreach(KeyValuePair<string, int> entry in plotBools) vars.watchers.Add(new MemoryWatcher<byte>(new DeepPointer(targetAddress(ptr, 4), 0x16C, 0xA34, 0x60, entry.Value)) { Name = entry.Key });
 
 
-        // XYZ position
-        ptr = scanner.Scan(new SigScanTarget(23,
-            "0F1F 44 00 00",        // nop dword ptr [rax+rax+00]
-            "85 DB",                // test ebx,ebx
-            "78 3A",                // js MassEffect3.exe+59A75E
-            "3B 1D ????????",       // cmp ebx,[MassEffect3.exe+18B4248
-            "7D 32",                // jnl MassEffect3.exe+59A75E
-            "48 63 FB",             // movsxd rdi,ebx
-            "48 8B 05 ????????"));  // mov rax,[MassEffect3.exe+18B4240]  <----
-        if (ptr == IntPtr.Zero) throw new Exception("Could not find address!");
-        plotBools = new Dictionary<string, int>();
-        plotBools.Add("XPOS", 0x108); // XPOS
-        plotBools.Add("YPOS", 0x10C); // YPOS
-        plotBools.Add("ZPOS", 0x110); // ZPOS
-        foreach(KeyValuePair<string, int> entry in plotBools) vars.watchers.Add(new MemoryWatcher<uint>(new DeepPointer(targetAddress(ptr, 4), 0x0, 0x78, entry.Value)) { Name = entry.Key });
-    }
+			// XYZ position
+			ptr = scanner.Scan(new SigScanTarget(21,
+				"41 8B DC",             // mov ebx,r12d
+				"85 DB",                // test ebx,ebx
+				"78 3A",                // js MassEffect2.exe+598505
+				"3B 1D ????????",       // cmp ebx,[MassEffect2.exe+1760018
+				"7D 32",                // jnl MassEffect2.exe+598505
+				"48 63 FB",             // movsxd rdi,ebx
+				"48 8B 05 ????????"));  // mov rax,[MassEffect2.exe+1760010]  <----
+			if (ptr == IntPtr.Zero) throw new Exception("Could not find address!");
+			plotBools = new Dictionary<string, int>();
+			plotBools.Add("XPOS", 0x118);              // XPOS
+			plotBools.Add("YPOS", 0x11C);              // YPOS
+			plotBools.Add("ZPOS", 0x120);              // ZPOS
+			foreach(KeyValuePair<string, int> entry in plotBools) vars.watchers.Add(new MemoryWatcher<uint>(new DeepPointer(targetAddress(ptr, 4), 0x0, 0x78, entry.Value)) { Name = entry.Key });
+			break;
+			
+		case 3:
+		    // Mass Effect 3 plot bools for automatic splitting
+			ptr = scanner.Scan(new SigScanTarget(13,
+				"C3",                   // ret
+				"CC",                   // int 3
+				"CC",                   // int 3
+				"CC",                   // int 3
+				"CC",                   // int 3
+				"CC",                   // int 3
+				"48 83 EC 28",          // sub rsp,28
+				"48 8B 0D ????????",    // mov rcx,[MassEffect3.exe+1CBBC70]   <----
+				"48 85 C9",             // test rcx,rcx
+				"75 1F",                // jne MassEffect3.exe+AD241F
+				"48 8D 0D ????????"));  // lea rcx,[MassEffect3.exe+10AE638]
+			if (ptr == IntPtr.Zero) throw new Exception("Could not find address!");
+
+			// Story progression
+			plotBools.Add("prologueEarth", 0x9ED);
+			plotBools.Add("priorityMars", 0xA09);
+			plotBools.Add("priorityCitadel", 0xA14);
+			plotBools.Add("priorityPalaven", 0x924);
+			plotBools.Add("prioritySurkesh", 0x8A9);
+			plotBools.Add("preTuchanka", 0x940);
+			plotBools.Add("priorityTuchanka", 0x8FA);
+			plotBools.Add("priorityCitadelCerberus", 0x983);
+			plotBools.Add("rannochKoris", 0x934);
+			plotBools.Add("rannochGethServer", 0x935);
+			plotBools.Add("priorityRannoch", 0x967);
+			plotBools.Add("priorityThessia", 0x906);
+			plotBools.Add("priorityHorizonME3", 0x989);
+			plotBools.Add("priorityCerberusHead", 0x9DD);
+			plotBools.Add("priorityEarth", 0xA70);
+			plotBools.Add("priorityEndingME3", 0xAF3);
+
+			foreach(KeyValuePair<string, int> entry in plotBools) vars.watchers.Add(new MemoryWatcher<byte>(new DeepPointer(targetAddress(ptr, 4), 0x13C, 0xF0, entry.Value)) { Name = entry.Key });
+
+
+			// XYZ position
+			ptr = scanner.Scan(new SigScanTarget(23,
+				"0F1F 44 00 00",        // nop dword ptr [rax+rax+00]
+				"85 DB",                // test ebx,ebx
+				"78 3A",                // js MassEffect3.exe+59A75E
+				"3B 1D ????????",       // cmp ebx,[MassEffect3.exe+18B4248
+				"7D 32",                // jnl MassEffect3.exe+59A75E
+				"48 63 FB",             // movsxd rdi,ebx
+				"48 8B 05 ????????"));  // mov rax,[MassEffect3.exe+18B4240]  <----
+			if (ptr == IntPtr.Zero) throw new Exception("Could not find address!");
+			plotBools = new Dictionary<string, int>();
+			plotBools.Add("XPOS", 0x108); // XPOS
+			plotBools.Add("YPOS", 0x10C); // YPOS
+			plotBools.Add("ZPOS", 0x110); // ZPOS
+			foreach(KeyValuePair<string, int> entry in plotBools) vars.watchers.Add(new MemoryWatcher<uint>(new DeepPointer(targetAddress(ptr, 4), 0x0, 0x78, entry.Value)) { Name = entry.Key });
+			break;
+	}
 }
 
 startup
@@ -182,6 +226,18 @@ startup
     }
   }
 
+    // ME1 Autosplitting settings
+    settings.Add("ME1", true, "Mass Effect 1 - Autosplitting");
+	settings.Add("ME1Prologue", true, "Prologue", "ME1");
+	settings.Add("EdenPrime", true, "Eden Prime", "ME1");
+	settings.Add("Citadel", true, "Citadel", "ME1");
+	settings.Add("Noveria", true, "Noveria", "ME1");
+	settings.Add("Feros", true, "Feros", "ME1");
+	settings.Add("Therum", true, "Therum", "ME1");
+	settings.Add("Virmire", true, "Virmire", "ME1");
+	settings.Add("Ilos", true, "Ilos", "ME1");
+	settings.Add("Saren", true, "Saren", "ME1");	
+	
     // ME2 Autosplitting settings
     settings.Add("ME2", true, "Mass Effect 2 - Autosplitting");
     settings.Add("escapeLazarus", true, "Prologue: Awakening", "ME2");
@@ -255,94 +311,115 @@ update
 {
     vars.watchers.UpdateAll(game);
 
-    if (vars.trilogy == 2) {
-        // Main story progression missions
-        current.lazarusCompleted          = vars.bitCheck("plotPrologue", 5) && !vars.bitCheck("plotCR0", 1);
-        current.FreedomProgressCompleted  = vars.bitCheck("plotCR0", 1);
-        current.horizonCompleted          = vars.bitCheck("plotCR123", 0);
-        current.collectorShipCompleted    = vars.bitCheck("plotCR123", 1);
-        current.reaperIFFcompleted        = vars.bitCheck("plotIFF", 3);
-        current.crewAbductMissionComplete = vars.bitCheck("crewAbduct", 1);
+	switch ((byte)vars.trilogy)
+	{
+		case 1:
+			// Story progression
+			current.allowSplitting          = vars.bitCheck("GameStarted", 1);
+			current.edenPrimeStarted        = vars.bitCheck("edenPrimeStart", 5);
+			current.edenPrimeCompleted      = vars.bitCheck("edenPrimeCompleted", 1);
+			current.citadelCompleted        = vars.bitCheck("storyProgress", 2) || vars.bitCheck("storyProgress", 3) || vars.bitCheck("storyProgress", 4);
+			current.noveriaCompleted        = vars.bitCheck("huddles", 2);
+			current.ferosCompleted          = vars.bitCheck("huddles", 1);
+			current.therumCompleted         = vars.bitCheck("huddles", 0);
+			current.virmireCompleted        = vars.bitCheck("huddles", 3);
+			current.ilosCompleted           = vars.bitCheck("edenPrimeCompleted", 6);
+			current.finalBattleStarted      = vars.bitCheck("finalBattleStart", 4);
+		break;
+		
+		case 2:
+		    // Main story progression missions
+			current.lazarusCompleted          = vars.bitCheck("plotPrologue", 5) && !vars.bitCheck("plotCR0", 1);
+			current.FreedomProgressCompleted  = vars.bitCheck("plotCR0", 1);
+			current.horizonCompleted          = vars.bitCheck("plotCR123", 0);
+			current.collectorShipCompleted    = vars.bitCheck("plotCR123", 1);
+			current.reaperIFFcompleted        = vars.bitCheck("plotIFF", 3);
+			current.crewAbductMissionComplete = vars.bitCheck("crewAbduct", 1);
 
-        // Suicide mission
-        current.suicideOculusDestroyed = vars.bitCheck("suicideOculus", 4);
-        current.suicideValveCompleted  = vars.bitCheck("suicideValve", 5);
-        current.suicideBubbleCompleted = vars.bitCheck("suicideBubble", 0);
-        current.suicideMissonCompleted = vars.bitCheck("suicideReaper", 3) || vars.bitCheck("suicideReaper", 5) || vars.bitCheck("suicideReaper", 6);
+			// Suicide mission
+			current.suicideOculusDestroyed = vars.bitCheck("suicideOculus", 4);
+			current.suicideValveCompleted  = vars.bitCheck("suicideValve", 5);
+			current.suicideBubbleCompleted = vars.bitCheck("suicideBubble", 0);
+			current.suicideMissonCompleted = vars.bitCheck("suicideReaper", 3) || vars.bitCheck("suicideReaper", 5) || vars.bitCheck("suicideReaper", 6);
 
-        // Recruitment missions Phase 1
-        current.MordinRecruited    = vars.bitCheck("crewAcq1", 6);
-        current.GarrusRecruited    = vars.bitCheck("crewAcq1", 5);
-        current.JackRecruited      = vars.bitCheck("crewAcq1", 3);
-        current.GruntTankRecovered = vars.bitCheck("crewAcq2", 2);
+			// Recruitment missions Phase 1
+			current.MordinRecruited    = vars.bitCheck("crewAcq1", 6);
+			current.GarrusRecruited    = vars.bitCheck("crewAcq1", 5);
+			current.JackRecruited      = vars.bitCheck("crewAcq1", 3);
+			current.GruntTankRecovered = vars.bitCheck("crewAcq2", 2);
 
-        // Recruitment missions Phase 2
-        current.TaliRecruited   = vars.bitCheck("crewAcq1", 7);
-        current.ThaneRecruited  = vars.bitCheck("crewAcq3", 1);
-        current.SamaraRecruited = vars.bitCheck("crewAcq4", 4);
+			// Recruitment missions Phase 2
+			current.TaliRecruited   = vars.bitCheck("crewAcq1", 7);
+			current.ThaneRecruited  = vars.bitCheck("crewAcq3", 1);
+			current.SamaraRecruited = vars.bitCheck("crewAcq4", 4);
 
-        // N7 missions
-        current.N7WMF_completed  = vars.bitCheck("WMF", 0);
-        current.N7ARS_completed  = vars.bitCheck("ARS", 6);
-        current.N7ADS_completed  = vars.bitCheck("ADS", 0);
-        current.N7MSVE_completed = vars.bitCheck("MSVE", 2);
-        current.N7ESD_completed  = vars.bitCheck("ESD", 2);
-        current.N7ERS_completed  = vars.bitCheck("ESD", 3);
-        current.N7LO_completed   = vars.bitCheck("LO", 7);
+			// N7 missions
+			current.N7WMF_completed  = vars.bitCheck("WMF", 0);
+			current.N7ARS_completed  = vars.bitCheck("ARS", 6);
+			current.N7ADS_completed  = vars.bitCheck("ADS", 0);
+			current.N7MSVE_completed = vars.bitCheck("MSVE", 2);
+			current.N7ESD_completed  = vars.bitCheck("ESD", 2);
+			current.N7ERS_completed  = vars.bitCheck("ESD", 3);
+			current.N7LO_completed   = vars.bitCheck("LO", 7);
 
-        // DLC recruitments
-        current.ZaeedRecruited  = vars.bitCheck("crewAcq5", 4);
-        current.KasumiRecruited = vars.bitCheck("crewAcq6", 4);
+			// DLC recruitments
+			current.ZaeedRecruited  = vars.bitCheck("crewAcq5", 4);
+			current.KasumiRecruited = vars.bitCheck("crewAcq6", 4);
 
-        // Loyalty missions
-        current.MirandaLoyaltyMissionCompleted = vars.bitCheck("loyaltyMissions1", 0);
-        current.JacobLoyaltyMissionCompleted   = vars.bitCheck("loyaltyMissions1", 1);
-        current.JackLoyaltyMissionCompleted    = vars.bitCheck("loyaltyMissions1", 2);
-        current.LegionLoyaltyMissionCompleted  = vars.bitCheck("loyaltyMissions1", 3);
-        current.KasumiLoyaltyMissionCompleted  = vars.bitCheck("loyaltyMissions1", 4);
-        current.GarrusLoyaltyMissionCompleted  = vars.bitCheck("loyaltyMissions1", 5);
-        current.ThaneLoyaltyMissionCompleted   = vars.bitCheck("loyaltyMissions1", 6);
-        current.TaliLoyaltyMissionCompleted    = vars.bitCheck("loyaltyMissions1", 7);
-        current.MordinLoyaltyMissionCompleted  = vars.bitCheck("loyaltyMissions2", 0);
-        current.GruntLoyaltyMissionCompleted   = vars.bitCheck("loyaltyMissions2", 1);
-        current.SamaraLoyaltyMissionCompleted  = vars.bitCheck("loyaltyMissions2", 2);
-        current.ZaeedLoyaltyMissionCompleted   = vars.bitCheck("loyaltyMissions2", 3);
+			// Loyalty missions
+			current.MirandaLoyaltyMissionCompleted = vars.bitCheck("loyaltyMissions1", 0);
+			current.JacobLoyaltyMissionCompleted   = vars.bitCheck("loyaltyMissions1", 1);
+			current.JackLoyaltyMissionCompleted    = vars.bitCheck("loyaltyMissions1", 2);
+			current.LegionLoyaltyMissionCompleted  = vars.bitCheck("loyaltyMissions1", 3);
+			current.KasumiLoyaltyMissionCompleted  = vars.bitCheck("loyaltyMissions1", 4);
+			current.GarrusLoyaltyMissionCompleted  = vars.bitCheck("loyaltyMissions1", 5);
+			current.ThaneLoyaltyMissionCompleted   = vars.bitCheck("loyaltyMissions1", 6);
+			current.TaliLoyaltyMissionCompleted    = vars.bitCheck("loyaltyMissions1", 7);
+			current.MordinLoyaltyMissionCompleted  = vars.bitCheck("loyaltyMissions2", 0);
+			current.GruntLoyaltyMissionCompleted   = vars.bitCheck("loyaltyMissions2", 1);
+			current.SamaraLoyaltyMissionCompleted  = vars.bitCheck("loyaltyMissions2", 2);
+			current.ZaeedLoyaltyMissionCompleted   = vars.bitCheck("loyaltyMissions2", 3);
 
-        // Split Checks
-        current.allowSplitting   = vars.bitCheck("WakeUp", 7);
-    }
-
-    if (vars.trilogy == 3) {
-        // Story progression
-        current.prologueEarthCompleted           = vars.bitCheck("prologueEarth", 1);
-        current.priorityMarsCompleted            = vars.bitCheck("prologueEarth", 0);
-        current.priorityCitadelCompleted         = vars.bitCheck("priorityCitadel", 5);
-        current.priorityPalavenCompleted         = vars.bitCheck("priorityPalaven", 3);
-        current.prioritySurkeshCompleted         = vars.bitCheck("prioritySurkesh", 7);
-        current.priorityTurianPlatoonCompleted   = vars.bitCheck("preTuchanka", 2);
-        current.priorityKroganRachniCompleted    = vars.bitCheck("preTuchanka", 3);
-        current.priorityTuchankaCompleted        = vars.bitCheck("priorityTuchanka", 4);
-        current.priorityCerberusCitadelCompleted = vars.bitCheck("priorityCitadelCerberus", 0);
-        current.priorityGethDreadCompleted       = vars.bitCheck("prioritySurkesh", 5);
-        current.priorityKorisCompleted           = vars.bitCheck("rannochKoris", 6);
-        current.priorityGethServerCompleted      = vars.bitCheck("rannochGethServer", 0);
-        current.priorityRannochCompleted         = vars.bitCheck("priorityRannoch", 6);
-        current.priorityThessiaCompleted         = vars.bitCheck("priorityThessia", 2);
-        current.priorityHorizonME3Completed      = vars.bitCheck("priorityHorizonME3", 7);
-        current.priorityCerberusHQCompleted      = vars.bitCheck("priorityCerberusHead", 2);
-        current.priorityEarthCompleted           = vars.bitCheck("priorityEarth", 0);
-        current.endingReached                    = vars.bitCheck("priorityEndingME3", 2);
-  }
+			// Split Checks
+			current.allowSplitting   = vars.bitCheck("WakeUp", 7);
+		break;
+		
+		case 3:
+		    // Story progression
+			current.prologueEarthCompleted           = vars.bitCheck("prologueEarth", 1);
+			current.priorityMarsCompleted            = vars.bitCheck("prologueEarth", 0);
+			current.priorityCitadelCompleted         = vars.bitCheck("priorityCitadel", 5);
+			current.priorityPalavenCompleted         = vars.bitCheck("priorityPalaven", 3);
+			current.prioritySurkeshCompleted         = vars.bitCheck("prioritySurkesh", 7);
+			current.priorityTurianPlatoonCompleted   = vars.bitCheck("preTuchanka", 2);
+			current.priorityKroganRachniCompleted    = vars.bitCheck("preTuchanka", 3);
+			current.priorityTuchankaCompleted        = vars.bitCheck("priorityTuchanka", 4);
+			current.priorityCerberusCitadelCompleted = vars.bitCheck("priorityCitadelCerberus", 0);
+			current.priorityGethDreadCompleted       = vars.bitCheck("prioritySurkesh", 5);
+			current.priorityKorisCompleted           = vars.bitCheck("rannochKoris", 6);
+			current.priorityGethServerCompleted      = vars.bitCheck("rannochGethServer", 0);
+			current.priorityRannochCompleted         = vars.bitCheck("priorityRannoch", 6);
+			current.priorityThessiaCompleted         = vars.bitCheck("priorityThessia", 2);
+			current.priorityHorizonME3Completed      = vars.bitCheck("priorityHorizonME3", 7);
+			current.priorityCerberusHQCompleted      = vars.bitCheck("priorityCerberusHead", 2);
+			current.priorityEarthCompleted           = vars.bitCheck("priorityEarth", 0);
+			current.endingReached                    = vars.bitCheck("priorityEndingME3", 2);
+		break;
+	}
 }
 
 start
 {
-    if (vars.trilogy == 1) {
-        return false;
-    } else if (vars.trilogy == 2) {
-        return (vars.watchers["XPOS"].Old == 1136428027 && vars.watchers["YPOS"].Old == 3338886377 && (vars.watchers["XPOS"].Changed || vars.watchers["YPOS"].Changed) && current.allowSplitting);
-    } else if (vars.trilogy == 3) {
-        return (vars.watchers["XPOS"].Old == 3343853588 && vars.watchers["YPOS"].Old == 1187251110 && vars.watchers["ZPOS"].Old == 1181715610 && (vars.watchers["XPOS"].Changed || vars.watchers["YPOS"].Changed || vars.watchers["ZPOS"].Changed));
+	switch ((byte)vars.trilogy)
+	{
+		case 1:
+			return (vars.watchers["XPOS"].Old == 3315750912 && vars.watchers["YPOS"].Old == 1176961131 && vars.watchers["ZPOS"].Old == 3339513304 && (vars.watchers["XPOS"].Changed || vars.watchers["YPOS"].Changed || vars.watchers["ZPOS"].Changed));
+
+        case 2:
+			return (vars.watchers["XPOS"].Old == 1136428027 && vars.watchers["YPOS"].Old == 3338886377 && (vars.watchers["XPOS"].Changed || vars.watchers["YPOS"].Changed) && current.allowSplitting);
+
+		case 3:
+			return (vars.watchers["XPOS"].Old == 3343853588 && vars.watchers["YPOS"].Old == 1187251110 && vars.watchers["ZPOS"].Old == 1181715610 && (vars.watchers["XPOS"].Changed || vars.watchers["YPOS"].Changed || vars.watchers["ZPOS"].Changed));
     }
 }
 
@@ -353,84 +430,99 @@ isLoading
 
 split
 {
-    if (vars.trilogy == 2) {
-        return current.allowSplitting && old.allowSplitting && (
-	
-        // Main story progression
-        (settings["escapeLazarus"] && current.lazarusCompleted && !old.lazarusCompleted && !current.FreedomProgressCompleted) ||
-        (settings["freedomProgress"] && current.FreedomProgressCompleted && !old.FreedomProgressCompleted) ||
-        (settings["horizonCompleted"] && current.horizonCompleted && !old.horizonCompleted) ||
-        (settings["collectorShip"] && current.collectorShipCompleted && !old.collectorShipCompleted) ||
-        (settings["reaperIFF"] && current.reaperIFFcompleted && !old.reaperIFFcompleted) ||
-        (settings["crewAbuct"] && current.crewAbductMissionComplete && !old.crewAbductMissionComplete) || 
+	switch ((byte)vars.trilogy)
+	{
+		case 1:
+			return current.allowSplitting && old.allowSplitting && (
+			
+			// Splits at the completion of each priority mission, according to your personal settings
+			(settings["ME1Prologue"] && current.edenPrimeStarted && !old.edenPrimeStarted) ||
+			(settings["EdenPrime"] && current.edenPrimeCompleted && !old.edenPrimeCompleted) ||
+			(settings["Citadel"] && current.citadelCompleted && !old.citadelCompleted) ||
+			(settings["Noveria"] && current.noveriaCompleted && !old.noveriaCompleted) ||
+			(settings["Feros"] && current.ferosCompleted && !old.ferosCompleted) ||
+			(settings["Therum"] && current.therumCompleted && !old.therumCompleted) ||
+			(settings["Virmire"] && current.virmireCompleted && !old.virmireCompleted) ||
+			(settings["Ilos"] && current.ilosCompleted && !old.ilosCompleted) ||
+			(settings["Saren"] && current.finalBattleStarted && old.finalBattleStarted && vars.watchers["SarensHealth"].Current <= 0 && vars.watchers["SarensHealth"].Old > 0)		
+			);
+		
+		case 2:
+			return current.allowSplitting && old.allowSplitting && (
+		
+			// Main story progression
+			(settings["escapeLazarus"] && current.lazarusCompleted && !old.lazarusCompleted && !current.FreedomProgressCompleted) ||
+			(settings["freedomProgress"] && current.FreedomProgressCompleted && !old.FreedomProgressCompleted) ||
+			(settings["horizonCompleted"] && current.horizonCompleted && !old.horizonCompleted) ||
+			(settings["collectorShip"] && current.collectorShipCompleted && !old.collectorShipCompleted) ||
+			(settings["reaperIFF"] && current.reaperIFFcompleted && !old.reaperIFFcompleted) ||
+			(settings["crewAbuct"] && current.crewAbductMissionComplete && !old.crewAbductMissionComplete) || 
 
-        // Suicide Mission
-        (settings["ME2Oculus"] && current.suicideOculusDestroyed && !old.suicideOculusDestroyed) ||
-        (settings["ME2Valve"] && current.suicideValveCompleted && !old.suicideValveCompleted) ||
-        (settings["ME2Bubble"] && current.suicideBubbleCompleted && !old.suicideBubbleCompleted) ||
-        (settings["ME2ending"] && current.suicideMissonCompleted && !old.suicideMissonCompleted) ||
+			// Suicide Mission
+			(settings["ME2Oculus"] && current.suicideOculusDestroyed && !old.suicideOculusDestroyed) ||
+			(settings["ME2Valve"] && current.suicideValveCompleted && !old.suicideValveCompleted) ||
+			(settings["ME2Bubble"] && current.suicideBubbleCompleted && !old.suicideBubbleCompleted) ||
+			(settings["ME2ending"] && current.suicideMissonCompleted && !old.suicideMissonCompleted) ||
 
-        // N7 missions
-        (settings["N7_WMF"] && current.N7WMF_completed && !old.N7WMF_completed) ||
-        (settings["N7_ARS"] && current.N7ARS_completed && !old.N7ARS_completed) ||
-        (settings["N7_ADS"] && current.N7ADS_completed && !old.N7ADS_completed) ||
-        (settings["N7_MSVE"] && current.N7MSVE_completed && !old.N7MSVE_completed) ||
-        (settings["N7_ESD"] && current.N7ESD_completed && !old.N7ESD_completed) ||
-        (settings["N7_ERS"] && current.N7ERS_completed && !old.N7ERS_completed) ||
-        (settings["N7_LO"] && current.N7LO_completed && !old.N7LO_completed) ||
+			// N7 missions
+			(settings["N7_WMF"] && current.N7WMF_completed && !old.N7WMF_completed) ||
+			(settings["N7_ARS"] && current.N7ARS_completed && !old.N7ARS_completed) ||
+			(settings["N7_ADS"] && current.N7ADS_completed && !old.N7ADS_completed) ||
+			(settings["N7_MSVE"] && current.N7MSVE_completed && !old.N7MSVE_completed) ||
+			(settings["N7_ESD"] && current.N7ESD_completed && !old.N7ESD_completed) ||
+			(settings["N7_ERS"] && current.N7ERS_completed && !old.N7ERS_completed) ||
+			(settings["N7_LO"] && current.N7LO_completed && !old.N7LO_completed) ||
 
-        // Dossiers (used to split for Phase 1 of the game and for DLC characters)
-        (settings["recruitMordin"] && current.MordinRecruited && !old.MordinRecruited) ||
-        (settings["recruitGarrus"] && current.GarrusRecruited && !old.GarrusRecruited) ||
-        (settings["acquireGrunt"] && current.GruntTankRecovered && !old.GruntTankRecovered) ||
-        (settings["recruitJack"] && current.JackRecruited && !old.JackRecruited) ||
-        (settings["recruitZaeed"] && current.ZaeedRecruited && !old.ZaeedRecruited) ||
-        (settings["recruitKasumi"] && current.KasumiRecruited && !old.KasumiRecruited) ||
+			// Dossiers (used to split for Phase 1 of the game and for DLC characters)
+			(settings["recruitMordin"] && current.MordinRecruited && !old.MordinRecruited) ||
+			(settings["recruitGarrus"] && current.GarrusRecruited && !old.GarrusRecruited) ||
+			(settings["acquireGrunt"] && current.GruntTankRecovered && !old.GruntTankRecovered) ||
+			(settings["recruitJack"] && current.JackRecruited && !old.JackRecruited) ||
+			(settings["recruitZaeed"] && current.ZaeedRecruited && !old.ZaeedRecruited) ||
+			(settings["recruitKasumi"] && current.KasumiRecruited && !old.KasumiRecruited) ||
 
-        // Phase 2 Dossiers
-        (settings["recruitTali"] && current.TaliRecruited && !old.TaliRecruited) ||
-        (settings["recruitSamara"] && current.SamaraRecruited && !old.SamaraRecruited) ||
-        (settings["recruitThane"] && current.ThaneRecruited && !old.ThaneRecruited) ||
+			// Phase 2 Dossiers
+			(settings["recruitTali"] && current.TaliRecruited && !old.TaliRecruited) ||
+			(settings["recruitSamara"] && current.SamaraRecruited && !old.SamaraRecruited) ||
+			(settings["recruitThane"] && current.ThaneRecruited && !old.ThaneRecruited) ||
 
-        // Loyalty missions
-        (settings["loyaltyMiranda"] && current.MirandaLoyaltyMissionCompleted && !old.MirandaLoyaltyMissionCompleted) ||
-        (settings["loyaltyJacob"] && current.JacobLoyaltyMissionCompleted && !old.JacobLoyaltyMissionCompleted) ||
-        (settings["loyaltyJack"] && current.JackLoyaltyMissionCompleted && !old.JackLoyaltyMissionCompleted) ||
-        (settings["loyaltyLegion"] && current.LegionLoyaltyMissionCompleted && !old.LegionLoyaltyMissionCompleted) ||
-        (settings["loyaltyKasumi"] && current.KasumiLoyaltyMissionCompleted && !old.KasumiLoyaltyMissionCompleted) ||
-        (settings["loyaltyGarrus"] && current.GarrusLoyaltyMissionCompleted && !old.GarrusLoyaltyMissionCompleted) ||
-        (settings["loyaltyThane"] && current.ThaneLoyaltyMissionCompleted && !old.ThaneLoyaltyMissionCompleted) ||
-        (settings["loyaltyTali"] && current.TaliLoyaltyMissionCompleted && !old.TaliLoyaltyMissionCompleted) ||
-        (settings["loyaltyMordin"] && current.MordinLoyaltyMissionCompleted && !old.MordinLoyaltyMissionCompleted) ||
-        (settings["loyaltyGrunt"] && current.GruntLoyaltyMissionCompleted && !old.GruntLoyaltyMissionCompleted) ||
-        (settings["loyaltySamara"] && current.SamaraLoyaltyMissionCompleted && !old.SamaraLoyaltyMissionCompleted) ||
-        (settings["loyaltyZaeed"] && current.ZaeedLoyaltyMissionCompleted && !old.ZaeedLoyaltyMissionCompleted)
+			// Loyalty missions
+			(settings["loyaltyMiranda"] && current.MirandaLoyaltyMissionCompleted && !old.MirandaLoyaltyMissionCompleted) ||
+			(settings["loyaltyJacob"] && current.JacobLoyaltyMissionCompleted && !old.JacobLoyaltyMissionCompleted) ||
+			(settings["loyaltyJack"] && current.JackLoyaltyMissionCompleted && !old.JackLoyaltyMissionCompleted) ||
+			(settings["loyaltyLegion"] && current.LegionLoyaltyMissionCompleted && !old.LegionLoyaltyMissionCompleted) ||
+			(settings["loyaltyKasumi"] && current.KasumiLoyaltyMissionCompleted && !old.KasumiLoyaltyMissionCompleted) ||
+			(settings["loyaltyGarrus"] && current.GarrusLoyaltyMissionCompleted && !old.GarrusLoyaltyMissionCompleted) ||
+			(settings["loyaltyThane"] && current.ThaneLoyaltyMissionCompleted && !old.ThaneLoyaltyMissionCompleted) ||
+			(settings["loyaltyTali"] && current.TaliLoyaltyMissionCompleted && !old.TaliLoyaltyMissionCompleted) ||
+			(settings["loyaltyMordin"] && current.MordinLoyaltyMissionCompleted && !old.MordinLoyaltyMissionCompleted) ||
+			(settings["loyaltyGrunt"] && current.GruntLoyaltyMissionCompleted && !old.GruntLoyaltyMissionCompleted) ||
+			(settings["loyaltySamara"] && current.SamaraLoyaltyMissionCompleted && !old.SamaraLoyaltyMissionCompleted) ||
+			(settings["loyaltyZaeed"] && current.ZaeedLoyaltyMissionCompleted && !old.ZaeedLoyaltyMissionCompleted)
+			);
+			
+		case 3: 
+			return (
 
-        );
-    }
-
-    if (vars.trilogy == 3) {  
-        return (
-
-        // Splits at the completion of each priority mission, according to your personal settings
-        (settings["prologue"] && current.prologueEarthCompleted && !old.prologueEarthCompleted) ||
-        (settings["priorityMars"] && current.priorityMarsCompleted && !old.priorityMarsCompleted) ||
-        (settings["priorityCitadel"] && current.priorityCitadelCompleted && !old.priorityCitadelCompleted) ||
-        (settings["priorityPalaven"] && current.priorityPalavenCompleted && !old.priorityPalavenCompleted) ||
-        (settings["prioritySurkesh"] && current.prioritySurkeshCompleted && !old.prioritySurkeshCompleted) ||
-        (settings["turianPlatoon"] && current.priorityTurianPlatoonCompleted && !old.priorityTurianPlatoonCompleted) ||
-        (settings["koganRachni"] && current.priorityKroganRachniCompleted && !old.priorityKroganRachniCompleted) ||
-        (settings["priorityTuchanka"] && current.priorityTuchankaCompleted && !old.priorityTuchankaCompleted) ||
-        (settings["priorityBeforeThessia"] && current.priorityCerberusCitadelCompleted && !old.priorityCerberusCitadelCompleted) ||
-        (settings["priorityGethDreadnought"] && current.priorityGethDreadCompleted && !old.priorityGethDreadCompleted) ||
-        (settings["admiralKoris"] && current.priorityKorisCompleted && !old.priorityKorisCompleted) ||
-        (settings["gethServer"] && current.priorityGethServerCompleted && !old.priorityGethServerCompleted) ||
-        (settings["priorityRannoch"] && current.priorityRannochCompleted && !old.priorityRannochCompleted) ||
-        (settings["priorityThessia"] && current.priorityThessiaCompleted && !old.priorityThessiaCompleted) ||
-        (settings["priorityHorizon"] && current.priorityHorizonME3Completed && !old.priorityHorizonME3Completed) ||
-        (settings["priorityCerberusHQ"] && current.priorityCerberusHQCompleted && !old.priorityCerberusHQCompleted) ||
-        (settings["priorityEarth"] && current.priorityEarthCompleted && !old.priorityEarthCompleted) ||
-        (settings["priorityEnding"] && current.endingReached && !old.endingReached)
-        );
+			// Splits at the completion of each priority mission, according to your personal settings
+			(settings["prologue"] && current.prologueEarthCompleted && !old.prologueEarthCompleted) ||
+			(settings["priorityMars"] && current.priorityMarsCompleted && !old.priorityMarsCompleted) ||
+			(settings["priorityCitadel"] && current.priorityCitadelCompleted && !old.priorityCitadelCompleted) ||
+			(settings["priorityPalaven"] && current.priorityPalavenCompleted && !old.priorityPalavenCompleted) ||
+			(settings["prioritySurkesh"] && current.prioritySurkeshCompleted && !old.prioritySurkeshCompleted) ||
+			(settings["turianPlatoon"] && current.priorityTurianPlatoonCompleted && !old.priorityTurianPlatoonCompleted) ||
+			(settings["koganRachni"] && current.priorityKroganRachniCompleted && !old.priorityKroganRachniCompleted) ||
+			(settings["priorityTuchanka"] && current.priorityTuchankaCompleted && !old.priorityTuchankaCompleted) ||
+			(settings["priorityBeforeThessia"] && current.priorityCerberusCitadelCompleted && !old.priorityCerberusCitadelCompleted) ||
+			(settings["priorityGethDreadnought"] && current.priorityGethDreadCompleted && !old.priorityGethDreadCompleted) ||
+			(settings["admiralKoris"] && current.priorityKorisCompleted && !old.priorityKorisCompleted) ||
+			(settings["gethServer"] && current.priorityGethServerCompleted && !old.priorityGethServerCompleted) ||
+			(settings["priorityRannoch"] && current.priorityRannochCompleted && !old.priorityRannochCompleted) ||
+			(settings["priorityThessia"] && current.priorityThessiaCompleted && !old.priorityThessiaCompleted) ||
+			(settings["priorityHorizon"] && current.priorityHorizonME3Completed && !old.priorityHorizonME3Completed) ||
+			(settings["priorityCerberusHQ"] && current.priorityCerberusHQCompleted && !old.priorityCerberusHQCompleted) ||
+			(settings["priorityEarth"] && current.priorityEarthCompleted && !old.priorityEarthCompleted) ||
+			(settings["priorityEnding"] && current.endingReached && !old.endingReached)
+			);
     }
 }

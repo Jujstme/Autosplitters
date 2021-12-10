@@ -27,6 +27,11 @@ init
 	}	
 }
 
+startup
+{
+    MessageBox.Show("Disclaimer: the current load removal works by directly accessing the game memory.\n\nnBy using this autosplitter, you acknowledge it is unknown whether this triggers any known anti-cheat measure.\n\nPress OK to continue.", "LiveSplit - Halo Infinite", MessageBoxButtons.OK, MessageBoxIcon.Information);
+}
+
 update
 {
     if (version == "Unsupported") return false;

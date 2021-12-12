@@ -8,7 +8,13 @@ init
 {
     if (!game.Is64Bit()) throw new Exception("Not a 64bit application!");
 
-    version = modules.First().FileVersionInfo.FileVersion;
+    int arbiterModuleSize = modules.Where(x => x.ModuleName == "Arbiter.dll").FirstOrDefault().ModuleMemorySize;
+
+    switch (arbiterModuleSize)
+    {
+        case 0x1263000: version = "6.10020.17952.0"; break;
+        default: version = "Unsupported"; break;
+    }
 
     // Initialize the main watcher variable
     vars.watchers = new MemoryWatcherList();
@@ -23,7 +29,7 @@ init
         default:
             version = "Unsupported";
             MessageBox.Show("You are running an unsupported version of the game.\nAutosplitter will be disabled.", "LiveSplit - Halo Infinite", MessageBoxButtons.OK, MessageBoxIcon.Information);
-			break;
+            break;
 	}	
 }
 

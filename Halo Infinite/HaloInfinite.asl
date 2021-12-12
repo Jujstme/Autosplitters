@@ -1,6 +1,5 @@
 // The script currently only provides a loadless timer for Halo Infinite
 // Splitting will be implemented when the Halo community defines the splits required for the speedrun
-// Sigscanning doesn't work on this game's .exe so the script needs to be updated after every patch
 
 state("HaloInfinite") {}
 

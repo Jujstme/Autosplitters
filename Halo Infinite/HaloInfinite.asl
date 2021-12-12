@@ -30,7 +30,33 @@ init
             version = "Unsupported";
             MessageBox.Show("You are running an unsupported version of the game.\nAutosplitter will be disabled.", "LiveSplit - Halo Infinite", MessageBoxButtons.OK, MessageBoxIcon.Information);
             break;
-	}	
+    }
+
+/*	
+    SigScans to use for newer versions of the game:
+
+    LoadStatus:
+      89 35 ????????    // mov [HaloInfinite.exe+43265A4],esi  <----
+      F3 0F2C C6        // cvttss2si eax,xmm6
+
+    LoadStatusPercentage: LoadStatus + 0x4
+      Alternatively:
+        89 05 ????????      // mov [HaloInfinite.exe+43265A8],eax
+        48 81 C4 ????????   // add rsp,00006378
+        41 5F               // pop r15
+
+    StatusString:
+      search for string: loaded levels\ui\mainmenu\mainmenu
+      while in the main menu of the game
+
+    LoadScreen
+      80 3D ???????? 00    // cmp byte ptr [HaloInfinite.exe+3E030A0],00
+      74 17                // je HaloInfinite.exe+161FAF4
+      48 8D 0D ????????    // lea rcx,[HaloInfinite.exe+3E030A8]
+      E8 ????????          // call HaloInfinite.exe+D18C20
+      84 C0                // test al,al
+*/
+
 }
 
 startup

@@ -47,7 +47,7 @@ update
 
 start
 {
-    return current.CurrentMapName == "mainmenu" && vars.watchers["LoadStatusPercentage"].Current > 0 && vars.watchers["LoadStatusPercentage"].Old == 0;
+    return current.CurrentMapName == "dungeon_banished_ship" && old.IsLoading && !current.IsLoading;
 }
 
 isLoading

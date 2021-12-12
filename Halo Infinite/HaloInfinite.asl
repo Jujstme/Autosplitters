@@ -8,6 +8,71 @@ init
 {
     if (!game.Is64Bit()) throw new Exception("Not a 64bit application!");
 
+    // Initialize the main watcher variable
+    vars.watchers = new MemoryWatcherList();
+
+    // Initialize variables needed for sigscanning
+    IntPtr ptr;
+    SignatureScanner scanner;
+    long gameBaseAddress = (long)modules.First().BaseAddress;
+    var pages = game.MemoryPages(true).Where(m => (long)m.BaseAddress >= gameBaseAddress);
+    Dictionary<string, bool> FoundVars = new Dictionary<string, bool>{
+        {"LoadStatus", false},
+        {"LoadStatusPercentage", false},
+        {"StatusString", false},
+        {"LoadScreen", false}
+    };
+
+    foreach (var page in pages)
+    {
+        scanner = new SignatureScanner(game, page.BaseAddress, (int)page.RegionSize);
+        if (!FoundVars["LoadStatus"]) {
+            ptr = scanner.Scan(new SigScanTarget(2,
+                "89 35 ????????",      // mov [HaloInfinite.exe+43265A4],esi  <----
+                "F3 0F2C C6"));        // cvttss2si eax,xmm6)
+            if (ptr != IntPtr.Zero) {
+                vars.watchers.Add(new MemoryWatcher<byte>(new DeepPointer(ptr + 4 + game.ReadValue<int>(ptr))) { Name = "LoadStatus" });
+                FoundVars["LoadStatus"] = true;
+            }
+        }
+
+        if (!FoundVars["LoadStatusPercentage"]) {
+            ptr = scanner.Scan(new SigScanTarget(2,
+                "89 05 ????????",      // mov [HaloInfinite.exe+43265A8],eax
+                "48 81 C4 ????????",   // add rsp,00006378
+                "41 5F"));             // pop r15
+            if (ptr != IntPtr.Zero) {
+                vars.watchers.Add(new MemoryWatcher<byte>(new DeepPointer(ptr + 4 + game.ReadValue<int>(ptr))) { Name = "LoadStatusPercentage" });
+                FoundVars["LoadStatusPercentage"] = true;
+            }
+        }
+
+        if (!FoundVars["StatusString"]) {
+            ptr = scanner.Scan(new SigScanTarget(12, "00 00 00 00 00 00 00 00 00 00 00 00 6C 6F 61 64"));
+            if (ptr != IntPtr.Zero) {
+                vars.watchers.Add(new StringWatcher(new DeepPointer(ptr), 255) { Name = "StatusString" });
+                FoundVars["StatusString"] = true;
+            }
+        }
+
+        if (!FoundVars["LoadScreen"]) {
+            ptr = scanner.Scan(new SigScanTarget(2,
+                "80 3D ???????? 00",    // cmp byte ptr [HaloInfinite.exe+3E030A0],00  <----
+                "74 17",                // je HaloInfinite.exe+161FAF4
+                "48 8D 0D ????????",    // lea rcx,[HaloInfinite.exe+3E030A8]
+                "E8 ????????",          // call HaloInfinite.exe+D18C20
+                "84 C0"));              // test al,al
+            if (ptr != IntPtr.Zero) {
+                vars.watchers.Add(new MemoryWatcher<bool>(new DeepPointer(ptr + 5 + game.ReadValue<int>(ptr))) { Name = "LoadScreen" });
+                FoundVars["LoadScreen"] = true;
+            }
+        }
+
+        if (FoundVars["LoadStatus"] && FoundVars["LoadStatusPercentage"] && FoundVars["StatusString"] && FoundVars["LoadScreen"]) break;
+    }
+
+/*
+    // Old method, still kept in here in case of need
     int arbiterModuleSize = modules.Where(x => x.ModuleName == "Arbiter.dll").FirstOrDefault().ModuleMemorySize;
 
     switch (arbiterModuleSize)
@@ -31,32 +96,7 @@ init
             MessageBox.Show("You are running an unsupported version of the game.\nAutosplitter will be disabled.", "LiveSplit - Halo Infinite", MessageBoxButtons.OK, MessageBoxIcon.Information);
             break;
     }
-
-/*	
-    SigScans to use for newer versions of the game:
-
-    LoadStatus:
-      89 35 ????????    // mov [HaloInfinite.exe+43265A4],esi  <----
-      F3 0F2C C6        // cvttss2si eax,xmm6
-
-    LoadStatusPercentage: LoadStatus + 0x4
-      Alternatively:
-        89 05 ????????      // mov [HaloInfinite.exe+43265A8],eax
-        48 81 C4 ????????   // add rsp,00006378
-        41 5F               // pop r15
-
-    StatusString:
-      search for string: loaded levels\ui\mainmenu\mainmenu
-      while in the main menu of the game
-
-    LoadScreen
-      80 3D ???????? 00    // cmp byte ptr [HaloInfinite.exe+3E030A0],00
-      74 17                // je HaloInfinite.exe+161FAF4
-      48 8D 0D ????????    // lea rcx,[HaloInfinite.exe+3E030A8]
-      E8 ????????          // call HaloInfinite.exe+D18C20
-      84 C0                // test al,al
 */
-
 }
 
 startup

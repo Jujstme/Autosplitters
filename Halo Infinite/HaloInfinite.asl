@@ -16,7 +16,6 @@ init
     long gameBaseAddress = (long)modules.First().BaseAddress;
     var pages = game.MemoryPages(true).Where(m => (long)m.BaseAddress >= gameBaseAddress);
     Dictionary<string, bool> FoundVars = new Dictionary<string, bool>{
-        {"LoadStatus", false},
         {"LoadStatusPercentage", false},
         {"StatusString", false},
         {"LoadScreen", false}
@@ -25,15 +24,6 @@ init
     foreach (var page in pages)
     {
         scanner = new SignatureScanner(game, page.BaseAddress, (int)page.RegionSize);
-        if (!FoundVars["LoadStatus"]) {
-            ptr = scanner.Scan(new SigScanTarget(2,
-                "89 35 ????????",      // mov [HaloInfinite.exe+43265A4],esi  <----
-                "F3 0F2C C6"));        // cvttss2si eax,xmm6)
-            if (ptr != IntPtr.Zero) {
-                vars.watchers.Add(new MemoryWatcher<byte>(new DeepPointer(ptr + 4 + game.ReadValue<int>(ptr))) { Name = "LoadStatus" });
-                FoundVars["LoadStatus"] = true;
-            }
-        }
 
         if (!FoundVars["LoadStatusPercentage"]) {
             ptr = scanner.Scan(new SigScanTarget(2,
@@ -42,6 +32,7 @@ init
                 "41 5F"));             // pop r15
             if (ptr != IntPtr.Zero) {
                 vars.watchers.Add(new MemoryWatcher<byte>(new DeepPointer(ptr + 4 + game.ReadValue<int>(ptr))) { Name = "LoadStatusPercentage" });
+                vars.watchers.Add(new MemoryWatcher<byte>(new DeepPointer(ptr + game.ReadValue<int>(ptr))) { Name = "LoadStatus" });
                 FoundVars["LoadStatusPercentage"] = true;
             }
         }
@@ -67,7 +58,7 @@ init
             }
         }
 
-        if (FoundVars["LoadStatus"] && FoundVars["LoadStatusPercentage"] && FoundVars["StatusString"] && FoundVars["LoadScreen"]) break;
+        if (FoundVars["LoadStatusPercentage"] && FoundVars["StatusString"] && FoundVars["LoadScreen"]) break;
     }
 
 /*

@@ -33,6 +33,7 @@ init
             if (ptr != IntPtr.Zero) {
                 vars.watchers.Add(new MemoryWatcher<byte>(new DeepPointer(ptr + 4 + game.ReadValue<int>(ptr))) { Name = "LoadStatusPercentage" });
                 vars.watchers.Add(new MemoryWatcher<byte>(new DeepPointer(ptr + game.ReadValue<int>(ptr))) { Name = "LoadStatus" });
+		// Alternative SigScan for LoadStatus: 89 45 94 8B 05 ???????? 89 45 98
                 FoundVars["LoadStatusPercentage"] = true;
             }
         }

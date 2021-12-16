@@ -16,7 +16,7 @@ init
     switch (modules.Where(x => x.ModuleName == "Arbiter.dll").FirstOrDefault().ModuleMemorySize)
     {
         case 0x1263000: version = "6.10020.17952.0"; break;
-		case 0x133F000: version = "6.10020.19048.0"; break;
+        case 0x133F000: version = "6.10020.19048.0"; break;
         default: version = "Unknown game version"; break;
     }
 

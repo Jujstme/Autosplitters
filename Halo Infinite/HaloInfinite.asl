@@ -141,3 +141,8 @@ isLoading
 {
     return current.IsLoading ?? true;
 }
+
+exit
+{
+	timer.IsGameTimePaused = true;
+}

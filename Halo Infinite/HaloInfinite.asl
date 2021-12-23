@@ -197,7 +197,7 @@ startup
     settings.SetToolTip("chkNexus", "Will trigger a split upon completing the mission \"Nexus\".");
     settings.SetToolTip("chkReachTheTop", "Will trigger a split upon reaching the top of the Command Spire.");
     settings.SetToolTip("chkDeactivateSpire2", "Will trigger a split after deactivation of the Command Spire.");
-    settings.SetToolTip("chkRepository", "Will trigger a split upon completion of the mission \"Repository\".");
+    settings.SetToolTip("chkRepository", "Will trigger a split upon completion of the mission \"Repository\"\nNOTE: This setting will also trigger a split if you reach The Road using the invincibility glitch.");
     settings.SetToolTip("chkRoad", "Will trigger a split upon entering the House of Reckoning.");
     settings.SetToolTip("HoR", "Will trigger a split upon completion of the House of Reckoning.");
     settings.SetToolTip("SilentAuditorium", "Will trigger a split upon defeat of the Harbringer.");

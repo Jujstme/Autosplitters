@@ -70,7 +70,7 @@ init
                         vars.watchers.Add(new MemoryWatcher<byte>(new DeepPointer(ptr + 4 + game.ReadValue<int>(ptr))) { Name = "LoadStatusPercentage" });
                         // If LoadStatus breaks in future game updates, we can scan for it using this alternative sigscan: 89 45 94 8B 05 ???????? 89 45 98
                         vars.watchers.Add(new MemoryWatcher<byte>(new DeepPointer(ptr + game.ReadValue<int>(ptr))) { Name = "LoadStatus" });
-                        vars.watchers.Add(new MemoryWatcher<byte>(new DeepPointer(ptr + 4 + game.ReadValue<int>(ptr) + 0x22C9C8)) { Name = "LoadStatusPercentage" });
+                        vars.watchers.Add(new MemoryWatcher<bool>(new DeepPointer(ptr + 4 + game.ReadValue<int>(ptr) + 0x22C9C8)) { Name = "LoadingIcon" });
                         FoundVars["LoadStatusPercentage"] = true;
                     }
                 }

@@ -197,7 +197,7 @@ startup
     settings.SetToolTip("chkNexus", "Will trigger a split upon completing the mission \"Nexus\".");
     settings.SetToolTip("chkReachTheTop", "Will trigger a split upon reaching the top of the Command Spire.");
     settings.SetToolTip("chkDeactivateSpire2", "Will trigger a split after deactivation of the Command Spire.");
-    settings.SetToolTip("chkRepository", "Will trigger a split upon completion of the mission \"Repository\"\nNOTE: This setting will also trigger a split if you reach The Road using the invincibility glitch.");
+    settings.SetToolTip("chkRepository", "Will trigger a split upon completion of the mission \"Repository\".");
     settings.SetToolTip("chkRoad", "Will trigger a split upon entering the House of Reckoning.");
     settings.SetToolTip("HoR", "Will trigger a split upon completion of the House of Reckoning.");
     settings.SetToolTip("SilentAuditorium", "Will trigger a split upon defeat of the Harbringer.");
@@ -280,7 +280,7 @@ split
     // Spire2: deactivate the spires
     else if (!vars.splits["Spire2"] && old.Map == "island01" && current.Map == "dungeon_forerunner_austin") { vars.splits["Spire2"] = true; return settings["chkSpire2"]; }
     // Repository
-    else if (!vars.splits["Repository"] && (old.Map == "dungeon_forerunner_austin" && current.Map == "island01") || (vars.watchers["Road"].Changed && vars.watchers["Road"].Current == 3)) { vars.splits["Repository"] = true; return settings["chkRepository"]; }
+    else if (!vars.splits["Repository"] && old.Map == "dungeon_forerunner_austin" && current.Map == "island01") { vars.splits["Repository"] = true; return settings["chkRepository"]; }
     // Road
     else if (!vars.splits["Road"] && old.Map == "island01" && current.Map == "dungeon_boss_hq_interior") { vars.splits["Road"] = true; return settings["chkRoad"]; }
     // House of Reckoning

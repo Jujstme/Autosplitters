@@ -4,7 +4,7 @@
 // Coding: Jujstme
 // contacts: just.tribe@gmail.com
 
-state("Sonic & SEGA All-Stars Racing", "steam/retail")
+state("Sonic & SEGA All-Stars Racing")
 {
   byte runStart: 0x82A044;              // Self-explanatory. Becomes 1 and stays 1 while ingame
   byte raceType: 0x8E7068, 0xAD0;       // 0 = Grand Prix, 3 = Mission; It's the main menu option used to choose the game mode; Actually used only for splitting correctly
@@ -25,14 +25,14 @@ state("Sonic & SEGA All-Stars Racing", "steam/retail")
 
 init
 {
-  // Little snippet that checks the version of the game for compatibility purpose
-  // and disables the autosplitter in case you loaded an incompatible version of the game
-  if (modules.First().ModuleMemorySize == 0xB4E000 || modules.First().ModuleMemorySize == 0x17DD000) {
+//  // Little snippet that checks the version of the game for compatibility purpose
+//  // and disables the autosplitter in case you loaded an incompatible version of the game
+//  if (modules.First().ModuleMemorySize == 0xB4E000 || modules.First().ModuleMemorySize == 0x17DD000) {
     version = "steam/retail";
-  } else {
-    version = "unsupported";
-    MessageBox.Show("This game version is currently not supported.", "LiveSplit Auto Splitter - Unsupported Game Version");
-  }
+//  } else {
+//    version = "unsupported";
+//    MessageBox.Show("This game version is currently not supported.", "LiveSplit Auto Splitter - Unsupported Game Version");
+//  }
 }
 
 startup

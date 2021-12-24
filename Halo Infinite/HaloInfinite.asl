@@ -40,7 +40,7 @@ init
             vars.watchers.Add(new MemoryWatcher<byte>(new DeepPointer(modules.First().BaseAddress + 0x482C908, 0xB9378)) { Name = "SequenceSouthernBeacon" });
             vars.watchers.Add(new MemoryWatcher<byte>(new DeepPointer(modules.First().BaseAddress + 0x482C908, 0xB9380)) { Name = "SequenceEasternBeacon" });
             vars.watchers.Add(new MemoryWatcher<byte>(new DeepPointer(modules.First().BaseAddress + 0x482C908, 0xB9388)) { Name = "SequenceSouthwesternBeacon" });
-            vars.watchers.Add(new MemoryWatcher<byte>(new DeepPointer(modules.First().BaseAddress + 0x482C908, 0xB7394)) { Name = "Road" });
+            // vars.watchers.Add(new MemoryWatcher<byte>(new DeepPointer(modules.First().BaseAddress + 0x482C908, 0xB7394)) { Name = "Road" });
             vars.watchers.Add(new MemoryWatcher<byte>(new DeepPointer(modules.First().BaseAddress + 0x482C908, 0xB740C)) { Name = "SilentAuditorium" });
             break;
             
@@ -113,7 +113,7 @@ init
                         vars.watchers.Add(new MemoryWatcher<byte>(new DeepPointer(ptr + 4 + game.ReadValue<int>(ptr), 0xB9378)) { Name = "SequenceSouthernBeacon" });
                         vars.watchers.Add(new MemoryWatcher<byte>(new DeepPointer(ptr + 4 + game.ReadValue<int>(ptr), 0xB9380)) { Name = "SequenceEasternBeacon" });
                         vars.watchers.Add(new MemoryWatcher<byte>(new DeepPointer(ptr + 4 + game.ReadValue<int>(ptr), 0xB9388)) { Name = "SequenceSouthwesternBeacon" });
-                        vars.watchers.Add(new MemoryWatcher<byte>(new DeepPointer(ptr + 4 + game.ReadValue<int>(ptr), 0xB7394)) { Name = "Road" });
+                        // vars.watchers.Add(new MemoryWatcher<byte>(new DeepPointer(ptr + 4 + game.ReadValue<int>(ptr), 0xB7394)) { Name = "Road" });
                         vars.watchers.Add(new MemoryWatcher<byte>(new DeepPointer(ptr + 4 + game.ReadValue<int>(ptr), 0xB740C)) { Name = "SilentAuditorium" });
                         FoundVars["CampaignData"] = true;
                     }
@@ -240,13 +240,13 @@ split
     // Foundation
     else if (!vars.splits["Foundation"] && old.Map == "dungeon_underbelly" && current.Map == "island01") { vars.splits["Foundation"] = true; return settings["chkUnderbelly"]; }
     // Outpost Tremonius
-    else if (!vars.splits["OutpostTremonius"] && vars.watchers["OutpostTremonius"].Changed && vars.watchers["OutpostTremonius"].Current == 6) { vars.splits["OutpostTremonius"] = true; return settings["chkOutpostTremonius"]; }
+    else if (!vars.splits["OutpostTremonius"] && current.Map == "island01" && vars.watchers["OutpostTremonius"].Changed && vars.watchers["OutpostTremonius"].Old == 0) { vars.splits["OutpostTremonius"] = true; return settings["chkOutpostTremonius"]; }
     // FOB Golf
-    else if (!vars.splits["FOB Golf"] && vars.watchers["FOBGolf"].Changed && vars.watchers["FOBGolf"].Current == 10) { vars.splits["FOB Golf"] = true; return settings["chkFOBGolf"]; }
+    else if (!vars.splits["FOB Golf"] && current.Map == "island01" && vars.watchers["FOBGolf"].Changed && vars.watchers["FOBGolf"].Current == 10) { vars.splits["FOB Golf"] = true; return settings["chkFOBGolf"]; }
     // Tower
-    else if (!vars.splits["Tower"] && vars.watchers["Tower"].Changed && vars.watchers["Tower"].Current == 10) { vars.splits["Tower"] = true; return settings["chkTower"]; }
+    else if (!vars.splits["Tower"] && current.Map == "island01" && vars.watchers["Tower"].Changed && vars.watchers["Tower"].Current == 10) { vars.splits["Tower"] = true; return settings["chkTower"]; }
     // Travel to Dig Site
-    else if (!vars.splits["TravelToDigSite"] && vars.watchers["TravelToDigSite"].Changed && vars.watchers["TravelToDigSite"].Current == 10) { vars.splits["TravelToDigSite"] = true; return settings["chkTravelToDigSite"]; }
+    else if (!vars.splits["TravelToDigSite"] && current.Map == "island01" && vars.watchers["TravelToDigSite"].Changed && vars.watchers["TravelToDigSite"].Current == 10) { vars.splits["TravelToDigSite"] = true; return settings["chkTravelToDigSite"]; }
     // Bassus
     else if (!vars.splits["Bassus"] && old.Map == "island01" && current.Map == "dungeon_forerunner_dallas") { vars.splits["Bassus"] = true; return settings["chkBassus"]; }
     // Conservatory
@@ -254,23 +254,23 @@ split
     // Spire approach
     else if (!vars.splits["SpireApproach"] && old.Map == "island01" && current.Map == "dungeon_spire_01") { vars.splits["SpireApproach"] = true; return settings["chkSpireApproach"]; }
     // Spire: Adjutant resolution
-    else if (!vars.splits["SpireAdjutantResolution"] && vars.watchers["Spire"].Changed && vars.watchers["Spire"].Current == 10) { vars.splits["SpireAdjutantResolution"] = true; return settings["chkSpireAdjutantResolution"]; }
+    else if (!vars.splits["SpireAdjutantResolution"] && current.Map == "island01" && vars.watchers["Spire"].Changed && vars.watchers["Spire"].Current == 10) { vars.splits["SpireAdjutantResolution"] = true; return settings["chkSpireAdjutantResolution"]; }
     // Pelican down: East AA gun
-    else if (!vars.splits["PelicanEast"] && vars.watchers["EastAAGun"].Changed && vars.watchers["EastAAGun"].Current == 10) { vars.splits["PelicanEast"] = true; return settings["chkPelicanEastAAGun"]; }
+    else if (!vars.splits["PelicanEast"] && current.Map == "island01" && vars.watchers["EastAAGun"].Changed && vars.watchers["EastAAGun"].Current == 10) { vars.splits["PelicanEast"] = true; return settings["chkPelicanEastAAGun"]; }
     // Pelican down: North AA gun
-    else if (!vars.splits["PelicanNorth"] && vars.watchers["NorthAAGun"].Changed && vars.watchers["NorthAAGun"].Current == 10) { vars.splits["PelicanNorth"] = true; return settings["chkPelicanNorthAAGun"]; }
+    else if (!vars.splits["PelicanNorth"] && current.Map == "island01" && vars.watchers["NorthAAGun"].Changed && vars.watchers["NorthAAGun"].Current == 10) { vars.splits["PelicanNorth"] = true; return settings["chkPelicanNorthAAGun"]; }
     // Pelican down: West AA gun
-    else if (!vars.splits["PelicanWest"] && vars.watchers["WestAAGun"].Changed && vars.watchers["WestAAGun"].Current == 10) { vars.splits["PelicanWest"] = true; return settings["chkPelicanWestAAGun"]; }
+    else if (!vars.splits["PelicanWest"] && current.Map == "island01" && vars.watchers["WestAAGun"].Changed && vars.watchers["WestAAGun"].Current == 10) { vars.splits["PelicanWest"] = true; return settings["chkPelicanWestAAGun"]; }
     // Pelican down: Spartan Killers
-    else if (!vars.splits["PelicanSpartanKillers"] && vars.watchers["PelicanSpartanKillers"].Changed && vars.watchers["PelicanSpartanKillers"].Current == 10) { vars.splits["PelicanSpartanKillers"] = true; return settings["chkPelicanSpartanKillers"]; }
+    else if (!vars.splits["PelicanSpartanKillers"] && current.Map == "island01" && vars.watchers["PelicanSpartanKillers"].Changed && vars.watchers["PelicanSpartanKillers"].Current == 10) { vars.splits["PelicanSpartanKillers"] = true; return settings["chkPelicanSpartanKillers"]; }
     // Sequence: Northern Beacon
-    else if (!vars.splits["SequenceNorthernBeacon"] && vars.watchers["SequenceNorthernBeacon"].Changed && vars.watchers["SequenceNorthernBeacon"].Current == 10) { vars.splits["SequenceNorthernBeacon"] = true; return settings["chkSequenceNorthernBeacon"]; }
+    else if (!vars.splits["SequenceNorthernBeacon"] && current.Map == "island01" && vars.watchers["SequenceNorthernBeacon"].Changed && vars.watchers["SequenceNorthernBeacon"].Current == 10) { vars.splits["SequenceNorthernBeacon"] = true; return settings["chkSequenceNorthernBeacon"]; }
     // Sequence: Southern Beacon
-    else if (!vars.splits["SequenceSouthernBeacon"] && vars.watchers["SequenceSouthernBeacon"].Changed && vars.watchers["SequenceSouthernBeacon"].Current == 10) { vars.splits["SequenceSouthernBeacon"] = true; return settings["chkSequenceSouthernBeacon"]; }
+    else if (!vars.splits["SequenceSouthernBeacon"] && current.Map == "island01" && vars.watchers["SequenceSouthernBeacon"].Changed && vars.watchers["SequenceSouthernBeacon"].Current == 10) { vars.splits["SequenceSouthernBeacon"] = true; return settings["chkSequenceSouthernBeacon"]; }
     // Sequence: Eastern Beacon
-    else if (!vars.splits["SequenceEasternBeacon"] && vars.watchers["SequenceEasternBeacon"].Changed && vars.watchers["SequenceEasternBeacon"].Current == 10) { vars.splits["SequenceEasternBeacon"] = true; return settings["chkSequenceEasternBeacon"]; }
+    else if (!vars.splits["SequenceEasternBeacon"] && current.Map == "island01" && vars.watchers["SequenceEasternBeacon"].Changed && vars.watchers["SequenceEasternBeacon"].Current == 10) { vars.splits["SequenceEasternBeacon"] = true; return settings["chkSequenceEasternBeacon"]; }
     // Sequence: Southwestern Beacon
-    else if (!vars.splits["SequenceSouthwesternBeacon"] && vars.watchers["SequenceSouthwesternBeacon"].Changed && vars.watchers["SequenceSouthwesternBeacon"].Current == 10) { vars.splits["SequenceSouthwesternBeacon"] = true; return settings["chkSequenceSouthwesternBeacon"]; }
+    else if (!vars.splits["SequenceSouthwesternBeacon"] && current.Map == "island01" && vars.watchers["SequenceSouthwesternBeacon"].Changed && vars.watchers["SequenceSouthwesternBeacon"].Current == 10) { vars.splits["SequenceSouthwesternBeacon"] = true; return settings["chkSequenceSouthwesternBeacon"]; }
     // Sequence: enter the Spire
     else if (!vars.splits["SequenceEnterCommandSpire"] && old.Map == "island01" && current.Map == "dungeon_forerunner_houston") { vars.splits["SequenceEnterCommandSpire"] = true; return settings["chkSequenceEnterCommandSpire"]; }
     // Nexus
@@ -286,7 +286,7 @@ split
     // House of Reckoning
     else if (!vars.splits["HoR"] && old.Map == "dungeon_boss_hq_interior" && current.Map == "dungeon_cortana_palace") { vars.splits["HoR"] = true; return settings["HoR"]; }
     // Silent Auditorium
-    else if (!vars.splits["SilentAuditorium"] && vars.watchers["SilentAuditorium"].Changed && vars.watchers["SilentAuditorium"].Current == 10) { vars.splits["SilentAuditorium"] = true; return settings["SilentAuditorium"]; }
+    else if (!vars.splits["SilentAuditorium"] && current.Map == "dungeon_cortana_palace" && vars.watchers["SilentAuditorium"].Changed && vars.watchers["SilentAuditorium"].Current == 10) { vars.splits["SilentAuditorium"] = true; return settings["SilentAuditorium"]; }
 }
 
 start

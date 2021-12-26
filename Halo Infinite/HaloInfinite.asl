@@ -27,7 +27,7 @@ init
             vars.watchers.Add(new StringWatcher(new DeepPointer(modules.First().BaseAddress + 0x4CA11B0), 255) { Name = "StatusString" });
             vars.watchers.Add(new MemoryWatcher<bool>(new DeepPointer(modules.First().BaseAddress + 0x47E73E0)) { Name = "LoadScreen" });
             vars.watchers.Add(new MemoryWatcher<bool>(new DeepPointer(modules.First().BaseAddress + 0x522A6D0)) { Name = "LoadingIcon" });
-            vars.watchers.Add(new MemoryWatcher<byte>(new DeepPointer(modules.First().BaseAddress + 0x482C908, 0xB5550)) { Name = "OutpostTremonius" });
+            vars.watchers.Add(new MemoryWatcher<byte>(new DeepPointer(modules.First().BaseAddress + 0x482C908, 0xB5558)) { Name = "OutpostTremonius" });
             vars.watchers.Add(new MemoryWatcher<byte>(new DeepPointer(modules.First().BaseAddress + 0x482C908, 0xB746C)) { Name = "FOBGolf" });
             vars.watchers.Add(new MemoryWatcher<byte>(new DeepPointer(modules.First().BaseAddress + 0x482C908, 0xB55B0)) { Name = "Tower" });
             vars.watchers.Add(new MemoryWatcher<byte>(new DeepPointer(modules.First().BaseAddress + 0x482C908, 0xB72BC)) { Name = "TravelToDigSite" });
@@ -100,7 +100,7 @@ init
                     ptr = scanner.Scan(new SigScanTarget(3, "4C 8D 35 ???????? 48 8D 0D ???????? 66"));
                     if (ptr != IntPtr.Zero)
                     {
-                        vars.watchers.Add(new MemoryWatcher<byte>(new DeepPointer(ptr + 4 + game.ReadValue<int>(ptr), 0xB5550)) { Name = "OutpostTremonius" });
+                        vars.watchers.Add(new MemoryWatcher<byte>(new DeepPointer(ptr + 4 + game.ReadValue<int>(ptr), 0xB5558)) { Name = "OutpostTremonius" });
                         vars.watchers.Add(new MemoryWatcher<byte>(new DeepPointer(ptr + 4 + game.ReadValue<int>(ptr), 0xB746C)) { Name = "FOBGolf" });
                         vars.watchers.Add(new MemoryWatcher<byte>(new DeepPointer(ptr + 4 + game.ReadValue<int>(ptr), 0xB55B0)) { Name = "Tower" });
                         vars.watchers.Add(new MemoryWatcher<byte>(new DeepPointer(ptr + 4 + game.ReadValue<int>(ptr), 0xB72BC)) { Name = "TravelToDigSite" });
@@ -240,7 +240,7 @@ split
     // Foundation
     else if (!vars.splits["Foundation"] && old.Map == "dungeon_underbelly" && current.Map == "island01") { vars.splits["Foundation"] = true; return settings["chkUnderbelly"]; }
     // Outpost Tremonius
-    else if (!vars.splits["OutpostTremonius"] && current.Map == "island01" && vars.watchers["OutpostTremonius"].Changed && vars.watchers["OutpostTremonius"].Old == 0) { vars.splits["OutpostTremonius"] = true; return settings["chkOutpostTremonius"]; }
+    else if (!vars.splits["OutpostTremonius"] && current.Map == "island01" && vars.watchers["OutpostTremonius"].Changed && vars.watchers["OutpostTremonius"].Current == 6) { vars.splits["OutpostTremonius"] = true; return settings["chkOutpostTremonius"]; }
     // FOB Golf
     else if (!vars.splits["FOB Golf"] && current.Map == "island01" && vars.watchers["FOBGolf"].Changed && vars.watchers["FOBGolf"].Current == 10) { vars.splits["FOB Golf"] = true; return settings["chkFOBGolf"]; }
     // Tower
@@ -256,13 +256,13 @@ split
     // Spire: Adjutant resolution
     else if (!vars.splits["SpireAdjutantResolution"] && current.Map == "island01" && vars.watchers["Spire"].Changed && vars.watchers["Spire"].Current == 10) { vars.splits["SpireAdjutantResolution"] = true; return settings["chkSpireAdjutantResolution"]; }
     // Pelican down: East AA gun
-    else if (!vars.splits["PelicanEast"] && current.Map == "island01" && vars.watchers["EastAAGun"].Changed && vars.watchers["EastAAGun"].Current == 10) { vars.splits["PelicanEast"] = true; return settings["chkPelicanEastAAGun"]; }
+    else if (!vars.splits["PelicanEast"] && current.Map == "island01" && vars.watchers["PelicanSpartanKillers"].Current != 10 && vars.watchers["EastAAGun"].Changed && vars.watchers["EastAAGun"].Current == 10) { vars.splits["PelicanEast"] = true; return settings["chkPelicanEastAAGun"]; }
     // Pelican down: North AA gun
-    else if (!vars.splits["PelicanNorth"] && current.Map == "island01" && vars.watchers["NorthAAGun"].Changed && vars.watchers["NorthAAGun"].Current == 10) { vars.splits["PelicanNorth"] = true; return settings["chkPelicanNorthAAGun"]; }
+    else if (!vars.splits["PelicanNorth"] && current.Map == "island01" && vars.watchers["PelicanSpartanKillers"].Current != 10 && vars.watchers["NorthAAGun"].Changed && vars.watchers["NorthAAGun"].Current == 10) { vars.splits["PelicanNorth"] = true; return settings["chkPelicanNorthAAGun"]; }
     // Pelican down: West AA gun
-    else if (!vars.splits["PelicanWest"] && current.Map == "island01" && vars.watchers["WestAAGun"].Changed && vars.watchers["WestAAGun"].Current == 10) { vars.splits["PelicanWest"] = true; return settings["chkPelicanWestAAGun"]; }
+    else if (!vars.splits["PelicanWest"] && current.Map == "island01" && vars.watchers["PelicanSpartanKillers"].Current != 10 && vars.watchers["WestAAGun"].Changed && vars.watchers["WestAAGun"].Current == 10) { vars.splits["PelicanWest"] = true; return settings["chkPelicanWestAAGun"]; }
     // Pelican down: Spartan Killers
-    else if (!vars.splits["PelicanSpartanKillers"] && current.Map == "island01" && vars.watchers["PelicanSpartanKillers"].Changed && vars.watchers["PelicanSpartanKillers"].Current == 10) { vars.splits["PelicanSpartanKillers"] = true; return settings["chkPelicanSpartanKillers"]; }
+    else if (!vars.splits["PelicanSpartanKillers"] && current.Map == "island01" && vars.watchers["EastAAGun"].Old == 10 && vars.watchers["NorthAAGun"].Old == 10 && vars.watchers["WestAAGun"].Old == 10 && vars.watchers["PelicanSpartanKillers"].Changed && vars.watchers["PelicanSpartanKillers"].Current == 10) { vars.splits["PelicanSpartanKillers"] = true; return settings["chkPelicanSpartanKillers"]; }
     // Sequence: Northern Beacon
     else if (!vars.splits["SequenceNorthernBeacon"] && current.Map == "island01" && vars.watchers["SequenceNorthernBeacon"].Changed && vars.watchers["SequenceNorthernBeacon"].Current == 10) { vars.splits["SequenceNorthernBeacon"] = true; return settings["chkSequenceNorthernBeacon"]; }
     // Sequence: Southern Beacon

@@ -23,18 +23,6 @@ state("Sonic & SEGA All-Stars Racing")
   uint totalLap: 0x8F7A68, 0x68;        // Reports the accurate timer for the race up to the previous lap. It's used to determine the time at the end of the race with 100% accuracy. For some reason the game multiplies the time by 204800 before saving it here, so remmeber to divide it by that same number to get the total time (in seconds)
 }
 
-init
-{
-//  // Little snippet that checks the version of the game for compatibility purpose
-//  // and disables the autosplitter in case you loaded an incompatible version of the game
-//  if (modules.First().ModuleMemorySize == 0xB4E000 || modules.First().ModuleMemorySize == 0x17DD000) {
-    version = "steam/retail";
-//  } else {
-//    version = "unsupported";
-//    MessageBox.Show("This game version is currently not supported.", "LiveSplit Auto Splitter - Unsupported Game Version");
-//  }
-}
-
 startup
 {
   vars.totaligt = 0;
@@ -73,10 +61,6 @@ start
 
 update
 {
-  // If the game version is unsupported, disable the autosplitter completely
-  if (version == "unsupported") {
-    return false;
-  } else {
     // If you restart an event or a race, the IGT of the failed race is still considered and added
     // This script is also used to add the time of any completed event or race to the total time
     if (current.globalFrameCount < old.globalFrameCount) {
@@ -136,8 +120,7 @@ update
         }
         vars.racetime = 0;  // As the race time has been added to totaligt, we force racetime to be zero
       }
-    }
-  }		
+    }		
 }
 
 split

@@ -1,302 +1,316 @@
+// Autosplitter and Load Time remover by Jujstme
+// Made thanks to the contributions from the HaloRuns community.
+// Thanks to all guys who helped in writing this
+// Coding: Jujstme
+// contacts: just.tribe@gmail.com
+// Version: 1.0.4 (Jan 1st, 2022)
+
 state("HaloInfinite") {}
-
-init
-{
-    // Basic check: if game is not a 64bit .exe, we hooked the wrong game process, so there's no need to continue
-    if (!game.Is64Bit()) throw new Exception("Not a 64bit application!");
-
-    // This is used as a flag to disable autosplitting if the game version is unsupported for whatever reason
-    vars.IsAutosplitterEnabled = true;
-
-    // Initialize the main watcher variable
-    vars.watchers = new MemoryWatcherList();
-    
-    // Determine game version through the Arbiter.dll module
-    switch (modules.Where(x => x.ModuleName == "Arbiter.dll").FirstOrDefault().ModuleMemorySize)
-    {
-        case 0x1263000: version = "6.10020.17952.0"; break;
-        case 0x133F000: version = "6.10020.19048.0"; break;
-        default: version = "Unknown game version"; break;
-    }
-    
-    switch (version)
-    {
-        case "6.10020.19048.0":
-            vars.watchers.Add(new MemoryWatcher<byte>(new DeepPointer(modules.First().BaseAddress + 0x4FFDD04)) { Name = "LoadStatus" });
-            vars.watchers.Add(new MemoryWatcher<byte>(new DeepPointer(modules.First().BaseAddress + 0x4FFDD08)) { Name = "LoadStatusPercentage" });
-            vars.watchers.Add(new StringWatcher(new DeepPointer(modules.First().BaseAddress + 0x4CA11B0), 255) { Name = "StatusString" });
-            vars.watchers.Add(new MemoryWatcher<bool>(new DeepPointer(modules.First().BaseAddress + 0x47E73E0)) { Name = "LoadScreen" });
-            vars.watchers.Add(new MemoryWatcher<bool>(new DeepPointer(modules.First().BaseAddress + 0x522A6D0)) { Name = "LoadingIcon" });
-            vars.watchers.Add(new MemoryWatcher<byte>(new DeepPointer(modules.First().BaseAddress + 0x482C908, 0xB5558)) { Name = "OutpostTremonius" });
-            vars.watchers.Add(new MemoryWatcher<byte>(new DeepPointer(modules.First().BaseAddress + 0x482C908, 0xB746C)) { Name = "FOBGolf" });
-            vars.watchers.Add(new MemoryWatcher<byte>(new DeepPointer(modules.First().BaseAddress + 0x482C908, 0xB55B0)) { Name = "Tower" });
-            vars.watchers.Add(new MemoryWatcher<byte>(new DeepPointer(modules.First().BaseAddress + 0x482C908, 0xB72BC)) { Name = "TravelToDigSite" });
-            vars.watchers.Add(new MemoryWatcher<byte>(new DeepPointer(modules.First().BaseAddress + 0x482C908, 0xB5308)) { Name = "Spire" });
-            vars.watchers.Add(new MemoryWatcher<byte>(new DeepPointer(modules.First().BaseAddress + 0x482C908, 0xB7344)) { Name = "EastAAGun" });
-            vars.watchers.Add(new MemoryWatcher<byte>(new DeepPointer(modules.First().BaseAddress + 0x482C908, 0xB7354)) { Name = "NorthAAGun" });
-            vars.watchers.Add(new MemoryWatcher<byte>(new DeepPointer(modules.First().BaseAddress + 0x482C908, 0xB7364)) { Name = "WestAAGun" });
-            vars.watchers.Add(new MemoryWatcher<byte>(new DeepPointer(modules.First().BaseAddress + 0x482C908, 0xB7384)) { Name = "PelicanSpartanKillers" });
-            vars.watchers.Add(new MemoryWatcher<byte>(new DeepPointer(modules.First().BaseAddress + 0x482C908, 0xB9370)) { Name = "SequenceNorthernBeacon" });
-            vars.watchers.Add(new MemoryWatcher<byte>(new DeepPointer(modules.First().BaseAddress + 0x482C908, 0xB9378)) { Name = "SequenceSouthernBeacon" });
-            vars.watchers.Add(new MemoryWatcher<byte>(new DeepPointer(modules.First().BaseAddress + 0x482C908, 0xB9380)) { Name = "SequenceEasternBeacon" });
-            vars.watchers.Add(new MemoryWatcher<byte>(new DeepPointer(modules.First().BaseAddress + 0x482C908, 0xB9388)) { Name = "SequenceSouthwesternBeacon" });
-            // vars.watchers.Add(new MemoryWatcher<byte>(new DeepPointer(modules.First().BaseAddress + 0x482C908, 0xB7394)) { Name = "Road" });
-            vars.watchers.Add(new MemoryWatcher<byte>(new DeepPointer(modules.First().BaseAddress + 0x482C908, 0xB740C)) { Name = "SilentAuditorium" });
-            break;
-            
-        default:
-            // If game version is not known, then try to find the memory addresses through signature scanning
-            IntPtr ptr;
-            SignatureScanner scanner;
-            var FoundVars = new Dictionary<string, bool>{
-                { "LoadStatusPercentage", false },
-                { "StatusString", false },
-                { "LoadScreen", false },
-                { "CampaignData", false }
-            };
-            
-            Thread.Sleep(3000);
-            
-            // Find the require memory addresses through sigScanning
-            foreach (var page in game.MemoryPages(true).Where(m => (long)m.BaseAddress >= (long)modules.First().BaseAddress))
-            {
-                scanner = new SignatureScanner(game, page.BaseAddress, (int)page.RegionSize);
-
-                if (!FoundVars["LoadStatusPercentage"])
-                {
-                    ptr = scanner.Scan(new SigScanTarget(2, "89 05 ???????? 48 81 C4 ???????? 41 5F"));
-                    if (ptr != IntPtr.Zero)
-                    {
-                        vars.watchers.Add(new MemoryWatcher<byte>(new DeepPointer(ptr + 4 + game.ReadValue<int>(ptr))) { Name = "LoadStatusPercentage" });
-                        // If LoadStatus breaks in future game updates, we can scan for it using this alternative sigscan: 89 45 94 8B 05 ???????? 89 45 98
-                        vars.watchers.Add(new MemoryWatcher<byte>(new DeepPointer(ptr + game.ReadValue<int>(ptr))) { Name = "LoadStatus" });
-                        vars.watchers.Add(new MemoryWatcher<bool>(new DeepPointer(ptr + 4 + game.ReadValue<int>(ptr) + 0x22C9C8)) { Name = "LoadingIcon" });
-                        FoundVars["LoadStatusPercentage"] = true;
-                    }
-                }
-
-                if (!FoundVars["StatusString"])
-                {
-                    ptr = scanner.Scan(new SigScanTarget(12, "00 00 00 00 00 00 00 00 00 00 00 00 6C 6F 61 64"));
-                    if (ptr != IntPtr.Zero)
-                    {
-                        vars.watchers.Add(new StringWatcher(new DeepPointer(ptr), 255) { Name = "StatusString" });
-                        FoundVars["StatusString"] = true;
-                    }
-                }
-
-                if (!FoundVars["LoadScreen"])
-                {
-                    ptr = scanner.Scan(new SigScanTarget(2, "80 3D ???????? 00 74 17 48 8D 0D ???????? E8 ???????? 84 C0"));
-                    if (ptr != IntPtr.Zero)
-                    {
-                        vars.watchers.Add(new MemoryWatcher<bool>(new DeepPointer(ptr + 5 + game.ReadValue<int>(ptr))) { Name = "LoadScreen" });
-                        FoundVars["LoadScreen"] = true;
-                    }
-                }
-                
-                if (!FoundVars["CampaignData"])
-                {
-                    ptr = scanner.Scan(new SigScanTarget(3, "4C 8D 35 ???????? 48 8D 0D ???????? 66"));
-                    if (ptr != IntPtr.Zero)
-                    {
-                        vars.watchers.Add(new MemoryWatcher<byte>(new DeepPointer(ptr + 4 + game.ReadValue<int>(ptr), 0xB5558)) { Name = "OutpostTremonius" });
-                        vars.watchers.Add(new MemoryWatcher<byte>(new DeepPointer(ptr + 4 + game.ReadValue<int>(ptr), 0xB746C)) { Name = "FOBGolf" });
-                        vars.watchers.Add(new MemoryWatcher<byte>(new DeepPointer(ptr + 4 + game.ReadValue<int>(ptr), 0xB55B0)) { Name = "Tower" });
-                        vars.watchers.Add(new MemoryWatcher<byte>(new DeepPointer(ptr + 4 + game.ReadValue<int>(ptr), 0xB72BC)) { Name = "TravelToDigSite" });
-                        vars.watchers.Add(new MemoryWatcher<byte>(new DeepPointer(ptr + 4 + game.ReadValue<int>(ptr), 0xB5308)) { Name = "Spire" });
-                        vars.watchers.Add(new MemoryWatcher<byte>(new DeepPointer(ptr + 4 + game.ReadValue<int>(ptr), 0xB7344)) { Name = "EastAAGun" });
-                        vars.watchers.Add(new MemoryWatcher<byte>(new DeepPointer(ptr + 4 + game.ReadValue<int>(ptr), 0xB7354)) { Name = "NorthAAGun" });
-                        vars.watchers.Add(new MemoryWatcher<byte>(new DeepPointer(ptr + 4 + game.ReadValue<int>(ptr), 0xB7364)) { Name = "WestAAGun" });
-                        vars.watchers.Add(new MemoryWatcher<byte>(new DeepPointer(ptr + 4 + game.ReadValue<int>(ptr), 0xB7384)) { Name = "PelicanSpartanKillers" });
-                        vars.watchers.Add(new MemoryWatcher<byte>(new DeepPointer(ptr + 4 + game.ReadValue<int>(ptr), 0xB9370)) { Name = "SequenceNorthernBeacon" });
-                        vars.watchers.Add(new MemoryWatcher<byte>(new DeepPointer(ptr + 4 + game.ReadValue<int>(ptr), 0xB9378)) { Name = "SequenceSouthernBeacon" });
-                        vars.watchers.Add(new MemoryWatcher<byte>(new DeepPointer(ptr + 4 + game.ReadValue<int>(ptr), 0xB9380)) { Name = "SequenceEasternBeacon" });
-                        vars.watchers.Add(new MemoryWatcher<byte>(new DeepPointer(ptr + 4 + game.ReadValue<int>(ptr), 0xB9388)) { Name = "SequenceSouthwesternBeacon" });
-                        // vars.watchers.Add(new MemoryWatcher<byte>(new DeepPointer(ptr + 4 + game.ReadValue<int>(ptr), 0xB7394)) { Name = "Road" });
-                        vars.watchers.Add(new MemoryWatcher<byte>(new DeepPointer(ptr + 4 + game.ReadValue<int>(ptr), 0xB740C)) { Name = "SilentAuditorium" });
-                        FoundVars["CampaignData"] = true;
-                    }
-                }
-
-                // Once we found all the required addresses, we can exit the loop
-                if (FoundVars["LoadStatusPercentage"] && FoundVars["StatusString"] && FoundVars["LoadScreen"] && FoundVars["CampaignData"]) break;
-            }
-
-            // If, for some reason, we didn't find all the addresses, this code will disable autosplitting functionality
-            // and display a warning message
-            if (!FoundVars["LoadStatusPercentage"] || !FoundVars["StatusString"] || !FoundVars["LoadScreen"] || !FoundVars["CampaignData"])
-            {
-                MessageBox.Show("This game version is not currently supported by the load remover.\n" +
-                                "Failed to retrieve the needed memory addresses.\n\n" + 
-                                "Load times removal and autosplitting functionality will be disabled.",
-                                "LiveSplit - Halo Infinite", MessageBoxButtons.OK, MessageBoxIcon.Information);
-                vars.IsAutosplitterEnabled = false;
-            }
-            break;
-    }
-
-    // Defining other variables we're gonna use in the update action
-    current.Map = "";
-    current.IsLoading = true;
-}
 
 startup
 {
-    settings.Add("chkBanished_Ship", true, "Warship Gbraakon");
-    settings.Add("chkUnderbelly", true, "Foundation");
-    settings.Add("chkOutpostTremonius", true, "Outpost Tremonius");
-    settings.Add("chkFOBGolf", true, "FOB Golf");
-    settings.Add("chkTower", true, "The Tower");
-    settings.Add("chkDigSite", true, "Excavation Site");
-    settings.Add("chkTravelToDigSite", true, "Reach the Excavation Site", "chkDigSite");
-    settings.Add("chkBassus", true, "Bassus", "chkDigSite");
-    settings.Add("chkConservatory", true, "Conservatory");
-    settings.Add("chkSpire", true, "Spire");
-    settings.Add("chkSpireApproach", true, "Approach the Command Spire", "chkSpire");
-    settings.Add("chkSpireAdjutantResolution", true, "Adjutant Resolution", "chkSpire");
-    settings.Add("chkPelicanDown", true, "Pelican Down");
-    settings.Add("chkPelicanEastAAGun", true, "East AA Gun", "chkPelicanDown");
-    settings.Add("chkPelicanNorthAAGun", true, "North AA Gun", "chkPelicanDown");
-    settings.Add("chkPelicanWestAAGun", true, "West AA Gun", "chkPelicanDown");
-    settings.Add("chkPelicanSpartanKillers", true, "Hyperius and Tovarus", "chkPelicanDown");
-    settings.Add("chkSequence", true, "The Sequence");
-    settings.Add("chkSequenceEasternBeacon", true, "Eastern Beacon", "chkSequence");
-    settings.Add("chkSequenceSouthernBeacon", true, "Southern Beacon", "chkSequence");
-    settings.Add("chkSequenceNorthernBeacon", true, "Northern Beacon", "chkSequence");
-    settings.Add("chkSequenceSouthwesternBeacon", true, "Southwestern Beacon", "chkSequence");
-    settings.Add("chkSequenceEnterCommandSpire", true, "Enter the Nexus", "chkSequence");
-    settings.Add("chkNexus", true, "Nexus");
-    settings.Add("chkSpire2", true, "The Command Spire");
-    settings.Add("chkReachTheTop", true, "Reach the top", "chkSpire2");
-    settings.Add("chkDeactivateSpire2", true, "Deactivate the command spire", "chkSpire2");
-    settings.Add("chkRepository", true, "Repository");
-    settings.Add("chkRoad", true, "The Road");
-    settings.Add("HoR", true, "House of Reckoning");
-    settings.Add("SilentAuditorium", true, "Silent Auditorium");
+    string[,] Settings =
+    {
+        { null,             "startOnWarship",         "Start the timer when gaining control on Warship Gbraakon", null, "false" },
+        { null,             "pauseAtCutscenes",       "Pause the game timer during cutscenes",       null,    "false" },
+        { null,             "pauseAtMainMenu",        "Pause the game timer in the main menu",       null,    "false" },
 
-    settings.SetToolTip("chkBanished_Ship", "Will trigger a split after completing the mission \"Warship Gbraakon\".");
-    settings.SetToolTip("chkUnderbelly", "Will trigger a split after completing the mission \"Foundation\".");
-    settings.SetToolTip("chkOutpostTremonius", "Will trigger a split after taking control of Outpost Tremonius.");
-    settings.SetToolTip("chkFOBGolf", "Will trigger a split after taking control of FOB Golf.");
-    settings.SetToolTip("chkTower", "Will trigger a split after freeing Spartan Griffin upon completion of the mission \"The Tower\".");
-    settings.SetToolTip("chkTravelToDigSite", "Will trigger a split after the first cutscene in the excavation site.");
-    settings.SetToolTip("chkBassus", "Will trigger a split upon entering the Conservatory, after Bassus' defeat.");
-    settings.SetToolTip("chkConservatory", "Will trigger a split after completing the mission \"Conservatory\".");
-    settings.SetToolTip("chkSpireApproach", "Will trigger a split upon entering the first spire.");
-    settings.SetToolTip("chkSpireAdjutantResolution", "Will trigger a split after defeting Adjuvant resolution and dectivating the spire.");
-    settings.SetToolTip("chkPelicanEastAAGun", "Will trigger a split upon destruction of the East AA Gun.");
-    settings.SetToolTip("chkPelicanNorthAAGun", "Will trigger a split upon destruction of the North AA Gun.");
-    settings.SetToolTip("chkPelicanWestAAGun", "Will trigger a split upon destruction of the West AA Gun.");
-    settings.SetToolTip("chkPelicanSpartanKillers", "Will trigger a split when finding Echo-216 after defeting the Spartan killers Hyperius and Tovarus.");
-    settings.SetToolTip("chkSequenceEasternBeacon", "Will trigger a split after activating the Eastern Beacon.");
-    settings.SetToolTip("chkSequenceSouthernBeacon", "Will trigger a split after activating the Southern Beacon.");
-    settings.SetToolTip("chkSequenceNorthernBeacon", "Will trigger a split after activating the Northern Beacon.");
-    settings.SetToolTip("chkSequenceSouthwesternBeacon", "Will trigger a split after activating the Southwestern Beacon.");
-    settings.SetToolTip("chkSequenceEnterCommandSpire", "Will trigger a split upon entering the Nexus.");
-    settings.SetToolTip("chkNexus", "Will trigger a split upon completing the mission \"Nexus\".");
-    settings.SetToolTip("chkReachTheTop", "Will trigger a split upon reaching the top of the Command Spire.");
-    settings.SetToolTip("chkDeactivateSpire2", "Will trigger a split after deactivation of the Command Spire.");
-    settings.SetToolTip("chkRepository", "Will trigger a split upon completion of the mission \"Repository\".");
-    settings.SetToolTip("chkRoad", "Will trigger a split upon entering the House of Reckoning.");
-    settings.SetToolTip("HoR", "Will trigger a split upon completion of the House of Reckoning.");
-    settings.SetToolTip("SilentAuditorium", "Will trigger a split upon defeat of the Harbringer.");
+        { null,             "autosplitting",          "Auto Splitting",               null, "true" },
 
-    // In order to avoid duplicated splitting when reloading a map, we need to set up a Dictionary which tells us whether we already triggered a split or not
-    string[] splits = new string[] { "Banished_Ship", "Foundation", "OutpostTremonius", "FOB Golf", "Tower", "TravelToDigSite", "Bassus", "Conservatory", "SpireApproach",
-                                 "SpireAdjutantResolution", "PelicanEast", "PelicanNorth", "PelicanWest", "PelicanSpartanKillers", "SequenceEasternBeacon",
-                                 "SequenceSouthernBeacon", "SequenceNorthernBeacon", "SequenceSouthwesternBeacon", "SequenceEnterCommandSpire", "Nexus",
-                                 "ReachTheTop", "Spire2", "Repository", "Road", "HoR", "SilentAuditorium" };
-    vars.splits = new Dictionary<string, bool>();
-    foreach (string s in splits) vars.splits.Add(s, false);
+        { "autosplitting",  "warshipGbraakon",        "Warship Gbraakon",             "Will trigger a split after completing the mission \"Warship Gbraakon\".",                             "true" },
+        { "autosplitting",  "foundation",             "Foundation",                   "Will trigger a split after completing the mission \"Foundation\".",                                   "true" },
+        { "autosplitting",  "outpostTremonius",       "Outpost Tremonius",            "Will trigger a split after taking control of Outpost Tremonius.",                                     "true" },
+        { "autosplitting",  "FOBGolf",                "FOB Golf",                     "Will trigger a split after taking control of FOB Golf.",                                              "true" },
+        { "autosplitting",  "tower",                  "Tower",                        "Will trigger a split after freeing Spartan Griffin upon completion of the mission \"The Tower\".",    "true" },
+
+        { "autosplitting",  "excavationSite",         "Excavation Site",              null, "true" },
+        { "excavationSite", "reachTheDigSite",        "Reach the Excavation Site",    "Will trigger a split after the first cutscene in the excavation site.",                               "true" },
+        { "excavationSite", "bassus",                 "Bassus",                       "Will trigger a split upon entering the Conservatory, after Bassus' defeat.",                          "true" },
+
+        { "autosplitting",  "conservatory",           "Conservatory",                 "Will trigger a split after completing the mission \"Conservatory\".",                                 "true" },
+
+        { "autosplitting",  "spire",                  "Spire",                        null, "true"},
+        { "spire",          "spireApproach",          "Approach the command spire",   "Will trigger a split upon entering the first spire.",                                                 "true" },
+        { "spire",          "adjutantResolution",     "Adjutant Resolution",          "Will trigger a split after defeting Adjuvant resolution and dectivating the spire.",                  "true" },
+
+        { "autosplitting",  "pelicanDown",            "Pelican Down",                 null, "true" },
+        { "pelicanDown",    "EastAAGun",              "East AA Gun",                  "Will trigger a split upon destruction of the East AA Gun.",                                           "true" },
+        { "pelicanDown",    "NorthAAGun",             "North AA Gun",                 "Will trigger a split upon destruction of the North AA Gun.",                                          "true" },
+        { "pelicanDown",    "WestAAGun",              "West AA Gun",                  "Will trigger a split upon destruction of the West AA Gun.",                                           "true" },
+        { "pelicanDown",    "spartanKillers",         "Hyperius and Tovarus",         "Will trigger a split when finding Echo-216 after defeting the Spartan killers Hyperius and Tovarus.", "true" },
+
+        { "autosplitting",  "sequence",               "The Sequence",                 null, "true" },
+        { "sequence",       "easternBeacon",          "Eastern Beacon",               "Will trigger a split after activating the Eastern Beacon.",                                           "true" },
+        { "sequence",       "southernBeacon",         "Southern Beacon",              "Will trigger a split after activating the Southern Beacon.",                                          "true" },
+        { "sequence",       "northernBeacon",         "Northern Beacon",              "Will trigger a split after activating the Northern Beacon.",                                          "true" },
+        { "sequence",       "southwesternBeacon",     "Southwestern Beacon",          "Will trigger a split after activating the Southwestern Beacon.",                                      "true" },
+        { "sequence",       "enterNexus",             "Enter the Nexus",              "Will trigger a split upon entering the Nexus.",                                                       "true" },
+
+        { "autosplitting",  "nexus",                  "Nexus",                        "Will trigger a split upon completing the mission \"Nexus\".",                                         "true" },
+
+        { "autosplitting",  "commandSpire",           "Command Spire",                null, "true" },
+        { "commandSpire",   "reachTheTop",            "Reach the Top",                "Will trigger a split upon reaching the top of the Command Spire.",                                    "true" },
+        { "commandSpire",   "deactivateCommandSpire", "Deactivate the Command Spire", "Will trigger a split after deactivation of the Command Spire.",                                       "true" },
+
+        { "autosplitting",  "repository",             "Repository",                   "Will trigger a split upon completion of the mission \"Repository\".",                                 "true" },
+        { "autosplitting",  "road",                   "Road",                         "Will trigger a split upon entering the House of Reckoning.",                                          "true" },
+        { "autosplitting",  "houseOfReckoning",       "House of Reckoning",           "Will trigger a split upon completion of the House of Reckoning.",                                     "true" },
+        { "autosplitting",  "silentAuditorium",       "Silent Auditorium",            "Will trigger a split upon defeat of the Harbringer.",                                                 "true" }
+    }; 
+
+    for (int i = 0; i < Settings.GetLength(0); i++)
+    {
+        settings.Add(Settings[i, 1], bool.Parse(Settings[i, 4]), Settings[i, 2], Settings[i, 0]);
+        if (!string.IsNullOrEmpty(Settings[i, 3])) settings.SetToolTip(Settings[i, 1], Settings[i, 3]);
+    }
+
+    vars.Maps = new ExpandoObject();
+    vars.Maps.MainMenu         = "mainmenu";
+    vars.Maps.WarshipGbraakon  = "dungeon_banished_ship";
+    vars.Maps.Foundation       = "dungeon_underbelly";
+    vars.Maps.ZetaHalo         = "island01";
+    vars.Maps.Conservatory     = "dungeon_forerunner_dallas";
+    vars.Maps.Spire01          = "dungeon_spire_01";
+    vars.Maps.Nexus            = "dungeon_forerunner_houston";
+    vars.Maps.Spire02          = "dungeon_spire_02";
+    vars.Maps.Repository       = "dungeon_forerunner_austin";
+    vars.Maps.HouseOfReckoning = "dungeon_boss_hq_interior";
+    vars.Maps.SilentAuditorium = "dungeon_cortana_palace";
+
+    vars.SplitBools = new Dictionary<string, bool>();
+    vars.AlreadyTriggeredSplits = new Dictionary<string, bool>();
+    for (int i = 0; i < Settings.GetLength(0); i++)
+    {
+        if (string.IsNullOrEmpty(Settings[i, 3]) || !Settings[i, 3].Contains("split")) continue;
+        vars.SplitBools.Add(Settings[i, 1], false);
+        vars.AlreadyTriggeredSplits.Add(Settings[i, 1], false);
+    }
+}
+
+init
+{
+    // Game versions
+    if (!new Dictionary<int, string>{
+        { 0x1263000, "v6.10020.17952.0" },
+        { 0x133F000, "v6.10020.19048.0" }
+    }.TryGetValue(modules.Where(x => x.ModuleName == "Arbiter.dll").FirstOrDefault().ModuleMemorySize, out version)) version = "Unknown game version";
+
+    // Initialize some basic variables I will use later on
+    IntPtr baseAddress = modules.First().BaseAddress;
+    vars.IsAutosplitterEnabled = true;
+
+    // Offset dictionaries
+    var LoadStatusVars = new Dictionary<string, Tuple<int, string>>();
+    int PlotBoolsOffset = new int();
+    var PlotBools = new Dictionary<string, int>{
+        { "WarshipGbraakonStartTrigger", 0xB55D0 },
+        { "OutpostTremonius",            0xB5558 },
+        { "FOBGolf",                     0xB746C },
+        { "Tower",                       0xB55B0 },
+        { "TravelToDigSite",             0xB72BC },
+        { "Spire",                       0xB5308 },
+        { "EastAAGun",                   0xB7344 },
+        { "NorthAAGun",                  0xB7354 },
+        { "WestAAGun",                   0xB7364 },
+        { "PelicanSpartanKillers",       0xB7384 },
+        { "SequenceNorthernBeacon",      0xB9370 },
+        { "SequenceSouthernBeacon",      0xB9378 },
+        { "SequenceEasternBeacon",       0xB9380 },
+        { "SequenceSouthwesternBeacon",  0xB9388 },
+        { "SilentAuditorium",            0xB740C }
+    };
+
+    switch (version)
+    {
+        case "v6.10020.19048.0":
+            LoadStatusVars = new Dictionary<string, Tuple<int, string>>{
+                { "LoadStatus",           new Tuple<int, string>(0x4FFDD04, "byte") },
+                { "LoadStatusPercentage", new Tuple<int, string>(0x4FFDD08, "byte") },
+                { "StatusString",         new Tuple<int, string>(0x4CA11B0, "string") },
+                { "LoadScreen",           new Tuple<int, string>(0x47E73E0, "bool") },
+                { "LoadingIcon",          new Tuple<int, string>(0x522A6D0, "bool") },
+                { "IsCutScene",           new Tuple<int, string>(0x4845278, "bool") }
+            };
+            PlotBoolsOffset = 0x482C908;
+        break;
+
+        default:
+            int ptr;
+            SignatureScanner scanner;
+            var FoundVars = new Dictionary<string, bool>{
+                { "LoadStatusPercentage", false },
+                { "StatusString",         false },
+                { "LoadScreen",           false },
+                { "IsCutScene",           false },
+                { "CampaignData",         false }
+            };
+
+            Thread.Sleep(1000);
+
+            while (true)
+            {
+                foreach (var page in game.MemoryPages(true).Where(m => (long)m.BaseAddress >= (long)game.MainModuleWow64Safe().BaseAddress))
+                {
+                    scanner = new SignatureScanner(game, page.BaseAddress, (int)page.RegionSize);
+
+                    if (!FoundVars["LoadStatusPercentage"])
+                    {
+                        ptr = (int)scanner.Scan(new SigScanTarget(2, "89 05 ???????? 48 81 C4 ???????? 41 5F") { OnFound = (p, s, addr) => (IntPtr)((addr + 0x4 + p.ReadValue<int>(addr)).ToInt64() - baseAddress.ToInt64()) });
+                        if (ptr != 0)
+                        {
+                            LoadStatusVars["LoadStatusPercentage"] = new Tuple<int, string>(ptr, "byte");
+                            LoadStatusVars["LoadStatus"]           = new Tuple<int, string>(ptr - 4, "byte"); // If LoadStatus breaks in future game updates, we can scan for it using this alternative sigscan: 89 45 94 8B 05 ???????? 89 45 98
+                            LoadStatusVars["LoadingIcon"]          = new Tuple<int, string>(ptr + 0x22C9C8, "bool"); // Will probably break on next game update
+                            FoundVars["LoadStatusPercentage"] = true;
+                        }
+                    }
+
+                    if (!FoundVars["StatusString"])
+                    {
+                        ptr = (int)scanner.Scan(new SigScanTarget(12, "00 00 00 00 00 00 00 00 00 00 00 00 6C 6F 61 64") { OnFound = (p, s, addr) => (IntPtr)(addr.ToInt64() - baseAddress.ToInt64()) });
+                        if (ptr != 0)
+                        {
+                            LoadStatusVars["StatusString"] = new Tuple<int, string>(ptr, "string");
+                            FoundVars["StatusString"] = true;
+                        }
+                    }
+
+                    if (!FoundVars["LoadScreen"])
+                    {
+                        ptr = (int)scanner.Scan(new SigScanTarget(2, "80 3D ???????? 00 74 17 48 8D 0D ???????? E8 ???????? 84 C0") { OnFound = (p, s, addr) => (IntPtr)((addr + 0x5 + p.ReadValue<int>(addr)).ToInt64() - baseAddress.ToInt64()) });
+                        if (ptr != 0)
+                        {
+                            LoadStatusVars["LoadScreen"] = new Tuple<int, string>(ptr, "bool");
+                            FoundVars["LoadScreen"] = true;
+                        }
+                    }
+
+                    if (!FoundVars["IsCutScene"])
+                    {
+                        ptr = (int)scanner.Scan(new SigScanTarget(3, "48 8D 05 ???????? 48 03 C8 39 99") { OnFound = (p, s, addr) => (IntPtr)((addr + 0x4 + p.ReadValue<int>(addr)).ToInt64() - baseAddress.ToInt64()) });
+                        if (ptr != 0)
+                        {
+                            LoadStatusVars["IsCutScene"] = new Tuple<int, string>(ptr + 0x278, "bool");
+                            FoundVars["IsCutScene"] = true;
+                        }
+                    }
+
+                    if (!FoundVars["CampaignData"])
+                    {
+                        ptr = (int)scanner.Scan(new SigScanTarget(3, "4C 8D 35 ???????? 48 8D 0D ???????? 66") { OnFound = (p, s, addr) => (IntPtr)((addr + 0x4 + p.ReadValue<int>(addr)).ToInt64() - baseAddress.ToInt64()) });
+                        if (ptr != 0)
+                        {
+                            PlotBoolsOffset = ptr;
+                            FoundVars["CampaignData"] = true;
+                        }
+                    }
+
+                    if (FoundVars["LoadStatusPercentage"] && FoundVars["StatusString"] && FoundVars["LoadScreen"] && FoundVars["CampaignData"] && FoundVars["IsCutScene"]) break;
+                }
+
+                if (!FoundVars["LoadStatusPercentage"] || !FoundVars["StatusString"] || !FoundVars["LoadScreen"] || !FoundVars["CampaignData"] || !FoundVars["IsCutScene"])
+                {
+                    if (MessageBox.Show("You are running a currently unsupported version of the game and LiveSplit failed to automatically find the memory addresses needed for the autosplitter to work.\n\n" +
+                                        "If you just booted up the game, you can try running the script again to retrieve the needed memory addresses.\n\n" +
+                                        "Do you want to retry?",
+                                        "LiveSplit - Halo Infinite", MessageBoxButtons.YesNo, MessageBoxIcon.Information) == DialogResult.Yes) continue;
+
+                    MessageBox.Show("This game version is not currently supported by the autosplitter.\n\n" +
+                                    "Load time removal and autosplitting functionality will be disabled.",
+                                    "LiveSplit - Halo Infinite", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                    vars.IsAutosplitterEnabled = false;
+                    return;
+                }
+                break;
+            }
+        break;
+    }
+
+    vars.watchers = new MemoryWatcherList();
+    foreach (KeyValuePair<string, Tuple<int, string>> entry in LoadStatusVars)
+    {
+        switch (entry.Value.Item2)
+        {
+            case "byte": vars.watchers.Add(new MemoryWatcher<byte>(new DeepPointer(baseAddress + entry.Value.Item1)) { Name = entry.Key }); break;
+            case "string": vars.watchers.Add(new StringWatcher(new DeepPointer(baseAddress + entry.Value.Item1), 255) { Name = entry.Key }); break;
+            case "bool": vars.watchers.Add(new MemoryWatcher<bool>(new DeepPointer(baseAddress + entry.Value.Item1)) { Name = entry.Key }); break;
+        }
+    }
+    foreach (KeyValuePair<string, int> entry in PlotBools) vars.watchers.Add(new MemoryWatcher<byte>(new DeepPointer(baseAddress + PlotBoolsOffset, entry.Value)) { Name = entry.Key });
+
+    // Explicitly define current.Map here to avoid throwing an Exception during the first update
+    current.Map = string.Empty;
 }
 
 update
 {
-    // If the game is not supported, explicitly return false to shut down the autosplitter
+    // If we explicitly disabled the autosplitter, return false
     if (!vars.IsAutosplitterEnabled) return false;
-    
+
     // Update the watchers
     vars.watchers.UpdateAll(game);
+
+    // Explicitly define a couple of variables for easier access
+    current.IsLoading = vars.watchers["StatusString"].Current.Substring(0, vars.watchers["StatusString"].Current.LastIndexOf(" ")) == "loading" ||
+            vars.watchers["LoadStatus"].Current == 3 || vars.watchers["LoadingIcon"].Current || vars.watchers["LoadScreen"].Current ||
+            (vars.watchers["LoadStatusPercentage"].Current != 0 && vars.watchers["LoadStatusPercentage"].Current != 100) ||
+            (vars.watchers["LoadStatusPercentage"].Current == 100 && vars.watchers["LoadStatus"].Current < 4);
     
-    // Redefine game variables
     current.Map = vars.watchers["StatusString"].Current.Substring(vars.watchers["StatusString"].Current.LastIndexOf("\\") + 1);
 
-    current.IsLoading = vars.watchers["StatusString"].Current.Substring(0, vars.watchers["StatusString"].Current.LastIndexOf(" ")) == "loading" ||
-            vars.watchers["LoadStatus"].Current == 3 ||
-            // vars.watchers["LoadStatus"].Current < 4 ||
-            vars.watchers["LoadingIcon"].Current || vars.watchers["LoadScreen"].Current ||
-            (vars.watchers["LoadStatusPercentage"].Current == 100 && vars.watchers["LoadStatus"].Current < 4) ||
-            (vars.watchers["LoadStatusPercentage"].Current != 0 && vars.watchers["LoadStatusPercentage"].Current != 100);
- 
     // If the timer isn't running (eg. a run reset), reset the splits dictionary
-    if (timer.CurrentPhase == TimerPhase.NotRunning) { foreach (var s in new List<string>(vars.splits.Keys)) vars.splits[s] = false; }
-}
-
-split
-{
-    // Warship Gbraakon
-    if (!vars.splits["Banished_Ship"] && old.Map == "dungeon_banished_ship" && current.Map == "dungeon_underbelly") { vars.splits["Banished_Ship"] = true; return settings["chkBanished_Ship"]; }
-    // Foundation
-    else if (!vars.splits["Foundation"] && old.Map == "dungeon_underbelly" && current.Map == "island01") { vars.splits["Foundation"] = true; return settings["chkUnderbelly"]; }
-    // Outpost Tremonius
-    else if (!vars.splits["OutpostTremonius"] && current.Map == "island01" && vars.watchers["OutpostTremonius"].Changed && vars.watchers["OutpostTremonius"].Current == 6) { vars.splits["OutpostTremonius"] = true; return settings["chkOutpostTremonius"]; }
-    // FOB Golf
-    else if (!vars.splits["FOB Golf"] && current.Map == "island01" && vars.watchers["FOBGolf"].Changed && vars.watchers["FOBGolf"].Current == 10) { vars.splits["FOB Golf"] = true; return settings["chkFOBGolf"]; }
-    // Tower
-    else if (!vars.splits["Tower"] && current.Map == "island01" && vars.watchers["Tower"].Changed && vars.watchers["Tower"].Current == 10) { vars.splits["Tower"] = true; return settings["chkTower"]; }
-    // Travel to Dig Site
-    else if (!vars.splits["TravelToDigSite"] && current.Map == "island01" && vars.watchers["TravelToDigSite"].Changed && vars.watchers["TravelToDigSite"].Current == 10) { vars.splits["TravelToDigSite"] = true; return settings["chkTravelToDigSite"]; }
-    // Bassus
-    else if (!vars.splits["Bassus"] && old.Map == "island01" && current.Map == "dungeon_forerunner_dallas") { vars.splits["Bassus"] = true; return settings["chkBassus"]; }
-    // Conservatory
-    else if (!vars.splits["Conservatory"] && old.Map == "dungeon_forerunner_dallas" && current.Map == "island01") { vars.splits["Conservatory"] = true; return settings["chkConservatory"]; }
-    // Spire approach
-    else if (!vars.splits["SpireApproach"] && old.Map == "island01" && current.Map == "dungeon_spire_01") { vars.splits["SpireApproach"] = true; return settings["chkSpireApproach"]; }
-    // Spire: Adjutant resolution
-    else if (!vars.splits["SpireAdjutantResolution"] && current.Map == "island01" && vars.watchers["Spire"].Changed && vars.watchers["Spire"].Current == 10) { vars.splits["SpireAdjutantResolution"] = true; return settings["chkSpireAdjutantResolution"]; }
-    // Pelican down: East AA gun
-    else if (!vars.splits["PelicanEast"] && current.Map == "island01" && vars.watchers["PelicanSpartanKillers"].Current != 10 && vars.watchers["EastAAGun"].Changed && vars.watchers["EastAAGun"].Current == 10) { vars.splits["PelicanEast"] = true; return settings["chkPelicanEastAAGun"]; }
-    // Pelican down: North AA gun
-    else if (!vars.splits["PelicanNorth"] && current.Map == "island01" && vars.watchers["PelicanSpartanKillers"].Current != 10 && vars.watchers["NorthAAGun"].Changed && vars.watchers["NorthAAGun"].Current == 10) { vars.splits["PelicanNorth"] = true; return settings["chkPelicanNorthAAGun"]; }
-    // Pelican down: West AA gun
-    else if (!vars.splits["PelicanWest"] && current.Map == "island01" && vars.watchers["PelicanSpartanKillers"].Current != 10 && vars.watchers["WestAAGun"].Changed && vars.watchers["WestAAGun"].Current == 10) { vars.splits["PelicanWest"] = true; return settings["chkPelicanWestAAGun"]; }
-    // Pelican down: Spartan Killers
-    else if (!vars.splits["PelicanSpartanKillers"] && current.Map == "island01" && vars.watchers["EastAAGun"].Old == 10 && vars.watchers["NorthAAGun"].Old == 10 && vars.watchers["WestAAGun"].Old == 10 && vars.watchers["PelicanSpartanKillers"].Changed && vars.watchers["PelicanSpartanKillers"].Current == 10) { vars.splits["PelicanSpartanKillers"] = true; return settings["chkPelicanSpartanKillers"]; }
-    // Sequence: Northern Beacon
-    else if (!vars.splits["SequenceNorthernBeacon"] && current.Map == "island01" && vars.watchers["SequenceNorthernBeacon"].Changed && vars.watchers["SequenceNorthernBeacon"].Current == 10) { vars.splits["SequenceNorthernBeacon"] = true; return settings["chkSequenceNorthernBeacon"]; }
-    // Sequence: Southern Beacon
-    else if (!vars.splits["SequenceSouthernBeacon"] && current.Map == "island01" && vars.watchers["SequenceSouthernBeacon"].Changed && vars.watchers["SequenceSouthernBeacon"].Current == 10) { vars.splits["SequenceSouthernBeacon"] = true; return settings["chkSequenceSouthernBeacon"]; }
-    // Sequence: Eastern Beacon
-    else if (!vars.splits["SequenceEasternBeacon"] && current.Map == "island01" && vars.watchers["SequenceEasternBeacon"].Changed && vars.watchers["SequenceEasternBeacon"].Current == 10) { vars.splits["SequenceEasternBeacon"] = true; return settings["chkSequenceEasternBeacon"]; }
-    // Sequence: Southwestern Beacon
-    else if (!vars.splits["SequenceSouthwesternBeacon"] && current.Map == "island01" && vars.watchers["SequenceSouthwesternBeacon"].Changed && vars.watchers["SequenceSouthwesternBeacon"].Current == 10) { vars.splits["SequenceSouthwesternBeacon"] = true; return settings["chkSequenceSouthwesternBeacon"]; }
-    // Sequence: enter the Spire
-    else if (!vars.splits["SequenceEnterCommandSpire"] && old.Map == "island01" && current.Map == "dungeon_forerunner_houston") { vars.splits["SequenceEnterCommandSpire"] = true; return settings["chkSequenceEnterCommandSpire"]; }
-    // Nexus
-    else if (!vars.splits["Nexus"] && old.Map == "dungeon_forerunner_houston" && current.Map == "dungeon_spire_02") { vars.splits["Nexus"] = true; return settings["chkNexus"]; }
-    // Spire2: Reach the top
-    else if (!vars.splits["ReachTheTop"] && old.Map == "dungeon_spire_02" && current.Map == "island01") { vars.splits["ReachTheTop"] = true; return settings["chkReachTheTop"]; }
-    // Spire2: deactivate the spires
-    else if (!vars.splits["Spire2"] && old.Map == "island01" && current.Map == "dungeon_forerunner_austin") { vars.splits["Spire2"] = true; return settings["chkSpire2"]; }
-    // Repository
-    else if (!vars.splits["Repository"] && old.Map == "dungeon_forerunner_austin" && current.Map == "island01") { vars.splits["Repository"] = true; return settings["chkRepository"]; }
-    // Road
-    else if (!vars.splits["Road"] && old.Map == "island01" && current.Map == "dungeon_boss_hq_interior") { vars.splits["Road"] = true; return settings["chkRoad"]; }
-    // House of Reckoning
-    else if (!vars.splits["HoR"] && old.Map == "dungeon_boss_hq_interior" && current.Map == "dungeon_cortana_palace") { vars.splits["HoR"] = true; return settings["HoR"]; }
-    // Silent Auditorium
-    else if (!vars.splits["SilentAuditorium"] && current.Map == "dungeon_cortana_palace" && vars.watchers["SilentAuditorium"].Changed && vars.watchers["SilentAuditorium"].Current == 10) { vars.splits["SilentAuditorium"] = true; return settings["SilentAuditorium"]; }
-}
-
-start
-{
-    return current.Map == "dungeon_banished_ship" && old.IsLoading && !current.IsLoading;
+    if (timer.CurrentPhase == TimerPhase.NotRunning) { foreach (var s in new List<string>(vars.AlreadyTriggeredSplits.Keys)) vars.AlreadyTriggeredSplits[s] = false; }
 }
 
 isLoading
 {
-    return current.IsLoading;
+    return current.IsLoading || (settings["pauseAtMainMenu"] && current.Map == vars.Maps.MainMenu) || (settings["pauseAtCutscenes"] && vars.watchers["IsCutScene"].Current);
+}
+
+split
+{
+    vars.SplitBools["warshipGbraakon"] = !vars.AlreadyTriggeredSplits["warshipGbraakon"] && old.Map == vars.Maps.WarshipGbraakon && current.Map == vars.Maps.Foundation;
+    vars.SplitBools["foundation"] = !vars.AlreadyTriggeredSplits["foundation"] && old.Map == vars.Maps.Foundation && current.Map == vars.Maps.ZetaHalo;
+    vars.SplitBools["outpostTremonius"] = !vars.AlreadyTriggeredSplits["outpostTremonius"] && current.Map == vars.Maps.ZetaHalo && vars.watchers["OutpostTremonius"].Changed && vars.watchers["OutpostTremonius"].Current == 6;
+    vars.SplitBools["FOBGolf"] = !vars.AlreadyTriggeredSplits["FOBGolf"] && current.Map == vars.Maps.ZetaHalo && vars.watchers["FOBGolf"].Changed && vars.watchers["FOBGolf"].Current == 10;
+    vars.SplitBools["tower"] = !vars.AlreadyTriggeredSplits["tower"] && current.Map == vars.Maps.ZetaHalo && vars.watchers["Tower"].Changed && vars.watchers["Tower"].Current == 10;
+    vars.SplitBools["reachTheDigSite"] = !vars.AlreadyTriggeredSplits["reachTheDigSite"] && current.Map == vars.Maps.ZetaHalo && vars.watchers["TravelToDigSite"].Changed && vars.watchers["TravelToDigSite"].Current == 10;
+    vars.SplitBools["bassus"] = !vars.AlreadyTriggeredSplits["bassus"] && old.Map == vars.Maps.ZetaHalo && current.Map == vars.Maps.Conservatory;
+    vars.SplitBools["conservatory"] = !vars.AlreadyTriggeredSplits["conservatory"] && old.Map == vars.Maps.Conservatory && current.Map == vars.Maps.ZetaHalo;
+    vars.SplitBools["spireApproach"] = !vars.AlreadyTriggeredSplits["spireApproach"] && old.Map == vars.Maps.ZetaHalo && current.Map == vars.Maps.Spire01;
+    vars.SplitBools["adjutantResolution"] = !vars.AlreadyTriggeredSplits["adjutantResolution"] && current.Map == vars.Maps.ZetaHalo && vars.watchers["Spire"].Changed && vars.watchers["Spire"].Current == 10;
+    vars.SplitBools["EastAAGun"] = !vars.AlreadyTriggeredSplits["EastAAGun"] && current.Map == vars.Maps.ZetaHalo && vars.watchers["PelicanSpartanKillers"].Current != 10 && vars.watchers["EastAAGun"].Changed && vars.watchers["EastAAGun"].Current == 10;
+    vars.SplitBools["NorthAAGun"] = !vars.AlreadyTriggeredSplits["NorthAAGun"] && current.Map == vars.Maps.ZetaHalo && vars.watchers["PelicanSpartanKillers"].Current != 10 && vars.watchers["NorthAAGun"].Changed && vars.watchers["NorthAAGun"].Current == 10;
+    vars.SplitBools["WestAAGun"] = !vars.AlreadyTriggeredSplits["WestAAGun"] && current.Map == vars.Maps.ZetaHalo && vars.watchers["PelicanSpartanKillers"].Current != 10 && vars.watchers["WestAAGun"].Changed && vars.watchers["WestAAGun"].Current == 10;
+    vars.SplitBools["spartanKillers"] = !vars.AlreadyTriggeredSplits["spartanKillers"] && current.Map == vars.Maps.ZetaHalo && vars.watchers["EastAAGun"].Old == 10 && vars.watchers["NorthAAGun"].Old == 10 && vars.watchers["WestAAGun"].Old == 10 && vars.watchers["PelicanSpartanKillers"].Changed && vars.watchers["PelicanSpartanKillers"].Current == 10;
+    vars.SplitBools["easternBeacon"] = !vars.AlreadyTriggeredSplits["easternBeacon"] && current.Map == vars.Maps.ZetaHalo && vars.watchers["SequenceEasternBeacon"].Changed && vars.watchers["SequenceEasternBeacon"].Current == 10;
+    vars.SplitBools["southernBeacon"] = !vars.AlreadyTriggeredSplits["southernBeacon"] && current.Map == vars.Maps.ZetaHalo && vars.watchers["SequenceSouthernBeacon"].Changed && vars.watchers["SequenceSouthernBeacon"].Current == 10;
+    vars.SplitBools["northernBeacon"] = !vars.AlreadyTriggeredSplits["northernBeacon"] && current.Map == vars.Maps.ZetaHalo && vars.watchers["SequenceNorthernBeacon"].Changed && vars.watchers["SequenceNorthernBeacon"].Current == 10;
+    vars.SplitBools["southwesternBeacon"] = !vars.AlreadyTriggeredSplits["southwesternBeacon"] && current.Map == vars.Maps.ZetaHalo && vars.watchers["SequenceSouthwesternBeacon"].Changed && vars.watchers["SequenceSouthwesternBeacon"].Current == 10;
+    vars.SplitBools["enterNexus"] = !vars.AlreadyTriggeredSplits["enterNexus"] && old.Map == vars.Maps.ZetaHalo && current.Map == vars.Maps.Nexus;
+    vars.SplitBools["nexus"] = !vars.AlreadyTriggeredSplits["nexus"] && old.Map == vars.Maps.Nexus && current.Map == vars.Maps.Spire02;
+    vars.SplitBools["reachTheTop"] = !vars.AlreadyTriggeredSplits["reachTheTop"] && old.Map == vars.Maps.Spire02 && current.Map == vars.Maps.ZetaHalo;
+    vars.SplitBools["deactivateCommandSpire"] = !vars.AlreadyTriggeredSplits["deactivateCommandSpire"] && old.Map == vars.Maps.ZetaHalo && current.Map == vars.Maps.Repository;
+    vars.SplitBools["repository"] = !vars.AlreadyTriggeredSplits["repository"] && old.Map == vars.Maps.Repository && current.Map == vars.Maps.ZetaHalo;
+    vars.SplitBools["road"] = !vars.AlreadyTriggeredSplits["road"] && old.Map == vars.Maps.ZetaHalo && current.Map == vars.Maps.HouseOfReckoning;
+    vars.SplitBools["houseOfReckoning"] = !vars.AlreadyTriggeredSplits["houseOfReckoning"] && old.Map == vars.Maps.HouseOfReckoning && current.Map == vars.Maps.SilentAuditorium;
+    vars.SplitBools["silentAuditorium"] = !vars.AlreadyTriggeredSplits["silentAuditorium"] && current.Map == vars.Maps.SilentAuditorium && vars.watchers["SilentAuditorium"].Changed && vars.watchers["SilentAuditorium"].Current == 10;
+
+    foreach (KeyValuePair<string, bool> entry in vars.SplitBools)
+    {
+        if (entry.Value)
+        {
+            vars.AlreadyTriggeredSplits[entry.Key] = true;
+            if (settings[entry.Key]) return true;
+        }
+    }
+}
+
+start
+{
+    //return current.Map == vars.Maps.WarshipGbraakon && old.IsLoading && !current.IsLoading && vars.watchers["WarshipGbraakonStartTrigger"].Current == 0;
+    return settings["startOnWarship"] ? current.Map == vars.Maps.WarshipGbraakon && vars.watchers["WarshipGbraakonStartTrigger"].Current == 3 && !current.IsLoading
+            : current.Map == vars.Maps.WarshipGbraakon && old.IsLoading && !current.IsLoading && vars.watchers["WarshipGbraakonStartTrigger"].Current == 0;
 }
 
 exit

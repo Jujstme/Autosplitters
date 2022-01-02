@@ -3,7 +3,7 @@
 // Thanks to all guys who helped in writing this
 // Coding: Jujstme
 // contacts: just.tribe@gmail.com
-// Version: 1.0.4 (Jan 1st, 2022)
+// Version: 1.0.4.1 (Jan 2nd, 2022)
 
 state("HaloInfinite") {}
 
@@ -56,7 +56,7 @@ startup
         { "autosplitting",  "road",                   "Road",                         "Will trigger a split upon entering the House of Reckoning.",                                          "true" },
         { "autosplitting",  "houseOfReckoning",       "House of Reckoning",           "Will trigger a split upon completion of the House of Reckoning.",                                     "true" },
         { "autosplitting",  "silentAuditorium",       "Silent Auditorium",            "Will trigger a split upon defeat of the Harbringer.",                                                 "true" }
-    }; 
+    };
 
     for (int i = 0; i < Settings.GetLength(0); i++)
     {
@@ -64,6 +64,7 @@ startup
         if (!string.IsNullOrEmpty(Settings[i, 3])) settings.SetToolTip(Settings[i, 1], Settings[i, 3]);
     }
 
+    // Define a new ExpandoObject to store some named constants we will need later on
     vars.Maps = new ExpandoObject();
     vars.Maps.MainMenu         = "mainmenu";
     vars.Maps.WarshipGbraakon  = "dungeon_banished_ship";
@@ -77,6 +78,10 @@ startup
     vars.Maps.HouseOfReckoning = "dungeon_boss_hq_interior";
     vars.Maps.SilentAuditorium = "dungeon_cortana_palace";
 
+    // Define two dictionaries we will use to manage autosplitting
+    // SplitBools: a dictionary of booleans that will tell us if we met the conditions to split at a certain point during the run
+    // AlreadyTriggeredSplits: pretty much self-explanatory, it records if we already triggered a certain splits, avoiding unwanted double splitting
+    // For convenience the code will get the dictionary keys from every voice in the settings in which we used the word "split" in the tooltip. It's very ugly and hacky, but it works and I don't care.
     vars.SplitBools = new Dictionary<string, bool>();
     vars.AlreadyTriggeredSplits = new Dictionary<string, bool>();
     for (int i = 0; i < Settings.GetLength(0); i++)
@@ -89,19 +94,21 @@ startup
 
 init
 {
-    // Game versions
+    // Identify the game version. This is used later, so if a game version is known, we can avoid using sigscanning.
     if (!new Dictionary<int, string>{
         { 0x1263000, "v6.10020.17952.0" },
         { 0x133F000, "v6.10020.19048.0" }
     }.TryGetValue(modules.Where(x => x.ModuleName == "Arbiter.dll").FirstOrDefault().ModuleMemorySize, out version)) version = "Unknown game version";
 
-    // Initialize some basic variables I will use later on
-    IntPtr baseAddress = modules.First().BaseAddress;
+    // Basic variable, pretty self-explanatory.
+    // We will change it to false if we need to disable the autosplitter for whatever reason.
     vars.IsAutosplitterEnabled = true;
 
     // Offset dictionaries
-    var LoadStatusVars = new Dictionary<string, Tuple<int, string>>();
-    int PlotBoolsOffset = new int();
+    var LoadStatusVars = new Dictionary<string, Tuple<IntPtr, string>>();
+    IntPtr PlotBoolsOffset = new IntPtr();
+
+    // These offsets should stay constant regardless of the game version... I hope.
     var PlotBools = new Dictionary<string, int>{
         { "WarshipGbraakonStartTrigger", 0xB55D0 },
         { "OutpostTremonius",            0xB5558 },
@@ -120,125 +127,159 @@ init
         { "SilentAuditorium",            0xB740C }
     };
 
+    // Use a switch statement so, if a game version is recognized, the script will directly grab whatever offsets I manually inputted here.
+    // Basically, we avoid using sigscanning, with all the associated headaches.
     switch (version)
     {
         case "v6.10020.19048.0":
-            LoadStatusVars = new Dictionary<string, Tuple<int, string>>{
-                { "LoadStatus",           new Tuple<int, string>(0x4FFDD04, "byte") },
-                { "LoadStatusPercentage", new Tuple<int, string>(0x4FFDD08, "byte") },
-                { "StatusString",         new Tuple<int, string>(0x4CA11B0, "string") },
-                { "LoadScreen",           new Tuple<int, string>(0x47E73E0, "bool") },
-                { "LoadingIcon",          new Tuple<int, string>(0x522A6D0, "bool") },
-                { "IsCutScene",           new Tuple<int, string>(0x4845278, "bool") }
+            LoadStatusVars = new Dictionary<string, Tuple<IntPtr, string>>{
+                { "LoadStatus",           new Tuple<IntPtr, string>(modules.First().BaseAddress + 0x4FFDD04, "byte") },
+                { "LoadStatusPercentage", new Tuple<IntPtr, string>(modules.First().BaseAddress + 0x4FFDD08, "byte") },
+                { "StatusString",         new Tuple<IntPtr, string>(modules.First().BaseAddress + 0x4CA11B0, "string") },
+                { "LoadScreen",           new Tuple<IntPtr, string>(modules.First().BaseAddress + 0x47E73E0, "bool") },
+                { "LoadingIcon",          new Tuple<IntPtr, string>(modules.First().BaseAddress + 0x522A6D0, "bool") },
+                { "IsCutScene",           new Tuple<IntPtr, string>(modules.First().BaseAddress + 0x4845278, "bool") }
             };
-            PlotBoolsOffset = 0x482C908;
+            PlotBoolsOffset = modules.First().BaseAddress + 0x482C908;
         break;
 
         default:
-            int ptr;
+            // In case of a new game version, this part will attempt to use sigscanning to recover the memory offsets.
+            // Note: sigscanning is potentially unrealiable due to how the anti-debug features of this game work.
+
+            // If the game has been launched from less than 5 seconds, throw an exception and re-execute the script.
+            // This is necessary to let the game decrypt some of the memory pages needed for sigscanning
+            if (game.StartTime > DateTime.Now - TimeSpan.FromSeconds(5d)) throw new Exception("Game launched less than 5 seconds ago. Retrying...");
+
+            IntPtr ptr;
             SignatureScanner scanner;
             var FoundVars = new Dictionary<string, bool>{
                 { "LoadStatusPercentage", false },
+                { "LoadingIcon",          false },
                 { "StatusString",         false },
                 { "LoadScreen",           false },
                 { "IsCutScene",           false },
                 { "CampaignData",         false }
             };
 
-            Thread.Sleep(1000);
-
-            while (true)
+            foreach (var page in game.MemoryPages(true).Where(m => (long)m.BaseAddress >= (long)game.MainModuleWow64Safe().BaseAddress))
             {
-                foreach (var page in game.MemoryPages(true).Where(m => (long)m.BaseAddress >= (long)game.MainModuleWow64Safe().BaseAddress))
+                scanner = new SignatureScanner(game, page.BaseAddress, (int)page.RegionSize);
+
+                if (!FoundVars["LoadStatusPercentage"])
                 {
-                    scanner = new SignatureScanner(game, page.BaseAddress, (int)page.RegionSize);
-
-                    if (!FoundVars["LoadStatusPercentage"])
+                    ptr = scanner.Scan(new SigScanTarget(2,
+                        "89 05 ????????",    // [HaloInfinite.exe+4FFDD08],eax  <---
+                        "48 81 C4 ????????", // add rsp,00006608
+                        "41 5F")             // pop r15
+                        { OnFound = (p, s, addr) => addr + 0x4 + p.ReadValue<int>(addr) });
+                    if (ptr != IntPtr.Zero)
                     {
-                        ptr = (int)scanner.Scan(new SigScanTarget(2, "89 05 ???????? 48 81 C4 ???????? 41 5F") { OnFound = (p, s, addr) => (IntPtr)((addr + 0x4 + p.ReadValue<int>(addr)).ToInt64() - baseAddress.ToInt64()) });
-                        if (ptr != 0)
-                        {
-                            LoadStatusVars["LoadStatusPercentage"] = new Tuple<int, string>(ptr, "byte");
-                            LoadStatusVars["LoadStatus"]           = new Tuple<int, string>(ptr - 4, "byte"); // If LoadStatus breaks in future game updates, we can scan for it using this alternative sigscan: 89 45 94 8B 05 ???????? 89 45 98
-                            LoadStatusVars["LoadingIcon"]          = new Tuple<int, string>(ptr + 0x22C9C8, "bool"); // Will probably break on next game update
-                            FoundVars["LoadStatusPercentage"] = true;
-                        }
+                        LoadStatusVars["LoadStatusPercentage"] = new Tuple<IntPtr, string>(ptr, "byte");
+                        LoadStatusVars["LoadStatus"]           = new Tuple<IntPtr, string>(ptr - 4, "byte"); // If LoadStatus breaks in future game updates, we can scan for it using this alternative sigscan: 89 45 94 8B 05 ???????? 89 45 98
+                        FoundVars["LoadStatusPercentage"] = true;
                     }
-
-                    if (!FoundVars["StatusString"])
-                    {
-                        ptr = (int)scanner.Scan(new SigScanTarget(12, "00 00 00 00 00 00 00 00 00 00 00 00 6C 6F 61 64") { OnFound = (p, s, addr) => (IntPtr)(addr.ToInt64() - baseAddress.ToInt64()) });
-                        if (ptr != 0)
-                        {
-                            LoadStatusVars["StatusString"] = new Tuple<int, string>(ptr, "string");
-                            FoundVars["StatusString"] = true;
-                        }
-                    }
-
-                    if (!FoundVars["LoadScreen"])
-                    {
-                        ptr = (int)scanner.Scan(new SigScanTarget(2, "80 3D ???????? 00 74 17 48 8D 0D ???????? E8 ???????? 84 C0") { OnFound = (p, s, addr) => (IntPtr)((addr + 0x5 + p.ReadValue<int>(addr)).ToInt64() - baseAddress.ToInt64()) });
-                        if (ptr != 0)
-                        {
-                            LoadStatusVars["LoadScreen"] = new Tuple<int, string>(ptr, "bool");
-                            FoundVars["LoadScreen"] = true;
-                        }
-                    }
-
-                    if (!FoundVars["IsCutScene"])
-                    {
-                        ptr = (int)scanner.Scan(new SigScanTarget(3, "48 8D 05 ???????? 48 03 C8 39 99") { OnFound = (p, s, addr) => (IntPtr)((addr + 0x4 + p.ReadValue<int>(addr)).ToInt64() - baseAddress.ToInt64()) });
-                        if (ptr != 0)
-                        {
-                            LoadStatusVars["IsCutScene"] = new Tuple<int, string>(ptr + 0x278, "bool");
-                            FoundVars["IsCutScene"] = true;
-                        }
-                    }
-
-                    if (!FoundVars["CampaignData"])
-                    {
-                        ptr = (int)scanner.Scan(new SigScanTarget(3, "4C 8D 35 ???????? 48 8D 0D ???????? 66") { OnFound = (p, s, addr) => (IntPtr)((addr + 0x4 + p.ReadValue<int>(addr)).ToInt64() - baseAddress.ToInt64()) });
-                        if (ptr != 0)
-                        {
-                            PlotBoolsOffset = ptr;
-                            FoundVars["CampaignData"] = true;
-                        }
-                    }
-
-                    if (FoundVars["LoadStatusPercentage"] && FoundVars["StatusString"] && FoundVars["LoadScreen"] && FoundVars["CampaignData"] && FoundVars["IsCutScene"]) break;
                 }
 
-                if (!FoundVars["LoadStatusPercentage"] || !FoundVars["StatusString"] || !FoundVars["LoadScreen"] || !FoundVars["CampaignData"] || !FoundVars["IsCutScene"])
+                if (!FoundVars["LoadingIcon"])
                 {
-                    if (MessageBox.Show("You are running a currently unsupported version of the game and LiveSplit failed to automatically find the memory addresses needed for the autosplitter to work.\n\n" +
-                                        "If you just booted up the game, you can try running the script again to retrieve the needed memory addresses.\n\n" +
-                                        "Do you want to retry?",
-                                        "LiveSplit - Halo Infinite", MessageBoxButtons.YesNo, MessageBoxIcon.Information) == DialogResult.Yes) continue;
-
-                    MessageBox.Show("This game version is not currently supported by the autosplitter.\n\n" +
-                                    "Load time removal and autosplitting functionality will be disabled.",
-                                    "LiveSplit - Halo Infinite", MessageBoxButtons.OK, MessageBoxIcon.Error);
-                    vars.IsAutosplitterEnabled = false;
-                    return;
+                    ptr = scanner.Scan(new SigScanTarget(6,
+                        "48 83 EC 28",       // sub rsp,28
+                        "80 3D ???????? 00", // cmp byte ptr [HaloInfinite.exe+516A1C8],00  <---
+                        "75 3C")             // jne HaloInfinite.exe+578849
+                        { OnFound = (p, s, addr) => addr + 0x5 + p.ReadValue<int>(addr) });
+                    if (ptr != IntPtr.Zero)
+                    {
+                        LoadStatusVars["LoadingIcon"] = new Tuple<IntPtr, string>(ptr + 0xC0508, "bool"); // Will probably break on next game update
+                        FoundVars["LoadingIcon"] = true;
+                    }
                 }
-                break;
+
+                if (!FoundVars["StatusString"])
+                {
+                    ptr = scanner.Scan(new SigScanTarget(12, "00 00 00 00 00 00 00 00 00 00 00 00 6C 6F 61 64") { OnFound = (p, s, addr) => addr });
+                    if (ptr != IntPtr.Zero)
+                    {
+                        LoadStatusVars["StatusString"] = new Tuple<IntPtr, string>(ptr, "string");
+                        FoundVars["StatusString"] = true;
+                    }
+                }
+
+                if (!FoundVars["LoadScreen"])
+                {
+                    ptr = scanner.Scan(new SigScanTarget(2,
+                        "80 3D ???????? 00",    // cmp byte ptr [HaloInfinite.exe+47E73E0]  <---
+                        "74 17",                // je HaloInfinite.exe+3178704
+                        "48 8D 0D ????????",    // lea rcx,[HaloInfinite.exe+47E73E8]
+                        "E8 ????????",          // call HaloInfinite.exe+27D1BF0
+                        "84 C0")                // test al,al
+                        { OnFound = (p, s, addr) => addr + 0x5 + p.ReadValue<int>(addr) });
+                    if (ptr != IntPtr.Zero)
+                    {
+                        LoadStatusVars["LoadScreen"] = new Tuple<IntPtr, string>(ptr, "bool");
+                        FoundVars["LoadScreen"] = true;
+                    }
+                }
+
+                if (!FoundVars["IsCutScene"])
+                {
+                    ptr = scanner.Scan(new SigScanTarget(3,
+                        "48 8D 05 ????????",   // lea rax,[HaloInfinite.exe+4845000]  <---
+                        "48 03 C8",            // add rcx,rax
+                        "39 99 ????????")      // cmp [rcx+00000278],ebx
+                        { OnFound = (p, s, addr) => addr + 0x4 + p.ReadValue<int>(addr) });
+                    if (ptr != IntPtr.Zero)
+                    {
+                        LoadStatusVars["IsCutScene"] = new Tuple<IntPtr, string>(ptr + 0x278, "bool");
+                        FoundVars["IsCutScene"] = true;
+                    }
+                }
+
+                if (!FoundVars["CampaignData"])
+                {
+                    ptr = scanner.Scan(new SigScanTarget(3,
+                        "4C 8D 35 ????????",   // lea r14,[HaloInfinite.exe+482C908]  <---
+                        "48 8D 0D ????????",   // lea rcx,[HaloInfinite.exe+482C900]
+                        "66")                  // nop word ptr [rax+rax+00000000]    --> original code: 66 66 66 0F1F 84 00 00000000
+                        { OnFound = (p, s, addr) => addr + 0x4 + p.ReadValue<int>(addr) });
+                    if (ptr != IntPtr.Zero)
+                    {
+                        PlotBoolsOffset = ptr;
+                        FoundVars["CampaignData"] = true;
+                    }
+                }
+
+                // If the script successfully found all the addresses, there's no need to continue the loop, so break it
+                if (FoundVars.All(m => m.Value == true)) break;
+            }
+
+            if (FoundVars.Any(m => m.Value == false))
+            {
+                // If sigscanning fails, then disable the autosplitter and return.
+                // At this point, the only way to re-enable the autosplitter is to either relaunch LiveSplit, reopen the ASL script or re-launch the game.
+                MessageBox.Show("This game version is not currently supported by the autosplitter.\n\n" +
+                                "Load time removal and autosplitting functionality will be disabled.",
+                                "LiveSplit - Halo Infinite", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                vars.IsAutosplitterEnabled = false;
+                return;
             }
         break;
     }
 
+    // Finally, once we have all the needed offsets, define our watchers
     vars.watchers = new MemoryWatcherList();
-    foreach (KeyValuePair<string, Tuple<int, string>> entry in LoadStatusVars)
+    foreach (KeyValuePair<string, Tuple<IntPtr, string>> entry in LoadStatusVars)
     {
         switch (entry.Value.Item2)
         {
-            case "byte": vars.watchers.Add(new MemoryWatcher<byte>(new DeepPointer(baseAddress + entry.Value.Item1)) { Name = entry.Key }); break;
-            case "string": vars.watchers.Add(new StringWatcher(new DeepPointer(baseAddress + entry.Value.Item1), 255) { Name = entry.Key }); break;
-            case "bool": vars.watchers.Add(new MemoryWatcher<bool>(new DeepPointer(baseAddress + entry.Value.Item1)) { Name = entry.Key }); break;
+            case "byte": vars.watchers.Add(new MemoryWatcher<byte>(new DeepPointer(entry.Value.Item1)) { Name = entry.Key }); break;
+            case "string": vars.watchers.Add(new StringWatcher(new DeepPointer(entry.Value.Item1), 255) { Name = entry.Key }); break;
+            case "bool": vars.watchers.Add(new MemoryWatcher<bool>(new DeepPointer(entry.Value.Item1)) { Name = entry.Key }); break;
         }
     }
-    foreach (KeyValuePair<string, int> entry in PlotBools) vars.watchers.Add(new MemoryWatcher<byte>(new DeepPointer(baseAddress + PlotBoolsOffset, entry.Value)) { Name = entry.Key });
+    foreach (KeyValuePair<string, int> entry in PlotBools) vars.watchers.Add(new MemoryWatcher<byte>(new DeepPointer(PlotBoolsOffset, entry.Value)) { Name = entry.Key });
 
-    // Explicitly define current.Map here to avoid throwing an Exception during the first update
+    // Ultimately, explicitly define current.Map here to avoid throwing an Exception during the first update
     current.Map = string.Empty;
 }
 
@@ -308,7 +349,6 @@ split
 
 start
 {
-    //return current.Map == vars.Maps.WarshipGbraakon && old.IsLoading && !current.IsLoading && vars.watchers["WarshipGbraakonStartTrigger"].Current == 0;
     return settings["startOnWarship"] ? current.Map == vars.Maps.WarshipGbraakon && vars.watchers["WarshipGbraakonStartTrigger"].Current == 3 && !current.IsLoading
             : current.Map == vars.Maps.WarshipGbraakon && old.IsLoading && !current.IsLoading && vars.watchers["WarshipGbraakonStartTrigger"].Current == 0;
 }

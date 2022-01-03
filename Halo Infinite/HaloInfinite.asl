@@ -3,7 +3,7 @@
 // Thanks to all guys who helped in writing this
 // Coding: Jujstme
 // contacts: just.tribe@gmail.com
-// Version: 1.0.4.1 (Jan 2nd, 2022)
+// Version: 1.0.4.2 (Jan 2nd, 2022)
 
 state("HaloInfinite") {}
 
@@ -90,6 +90,7 @@ startup
         vars.SplitBools.Add(Settings[i, 1], false);
         vars.AlreadyTriggeredSplits.Add(Settings[i, 1], false);
     }
+
 }
 
 init
@@ -162,42 +163,45 @@ init
                 { "CampaignData",         false }
             };
 
-            foreach (var page in game.MemoryPages(true).Where(m => (long)m.BaseAddress >= (long)game.MainModuleWow64Safe().BaseAddress))
+            foreach (var page in memory.MemoryPages(true).Where(m => (long)m.BaseAddress >= (long)modules.First().BaseAddress))
             {
-                scanner = new SignatureScanner(game, page.BaseAddress, (int)page.RegionSize);
+                scanner = new SignatureScanner(memory, page.BaseAddress, (int)page.RegionSize);
 
                 if (!FoundVars["LoadStatusPercentage"])
                 {
-                    ptr = scanner.Scan(new SigScanTarget(2,
-                        "89 05 ????????",    // [HaloInfinite.exe+4FFDD08],eax  <---
-                        "48 81 C4 ????????", // add rsp,00006608
-                        "41 5F")             // pop r15
+                    ptr = scanner.Scan(new SigScanTarget(10,
+                        "0F28 B4 24 ????????",   // movaps xmm6,[rsp,000065D0]
+                        "89 05 ????????")        // [HaloInfinite.exe+4FFDD08],eax  <---
                         { OnFound = (p, s, addr) => addr + 0x4 + p.ReadValue<int>(addr) });
                     if (ptr != IntPtr.Zero)
                     {
                         LoadStatusVars["LoadStatusPercentage"] = new Tuple<IntPtr, string>(ptr, "byte");
-                        LoadStatusVars["LoadStatus"]           = new Tuple<IntPtr, string>(ptr - 4, "byte"); // If LoadStatus breaks in future game updates, we can scan for it using this alternative sigscan: 89 45 94 8B 05 ???????? 89 45 98
+                        LoadStatusVars["LoadStatus"]           = new Tuple<IntPtr, string>(ptr - 4, "byte");
                         FoundVars["LoadStatusPercentage"] = true;
                     }
                 }
 
                 if (!FoundVars["LoadingIcon"])
                 {
-                    ptr = scanner.Scan(new SigScanTarget(6,
-                        "48 83 EC 28",       // sub rsp,28
-                        "80 3D ???????? 00", // cmp byte ptr [HaloInfinite.exe+516A1C8],00  <---
-                        "75 3C")             // jne HaloInfinite.exe+578849
-                        { OnFound = (p, s, addr) => addr + 0x5 + p.ReadValue<int>(addr) });
+                    ptr = scanner.Scan(new SigScanTarget(1,
+                        "E8 ????????",         // call HaloInfinite.GameVariantProperty_SetStringIdProperty_ED50  <---
+                        "44 8B 3B")            // mov r15d,[rbx]
+                        { OnFound = (p, s, addr) => addr + 0x4 + p.ReadValue<int>(addr) + 0xBE + 0x3 });
                     if (ptr != IntPtr.Zero)
                     {
-                        LoadStatusVars["LoadingIcon"] = new Tuple<IntPtr, string>(ptr + 0xC0508, "bool"); // Will probably break on next game update
+                        ptr += 0x4 + game.ReadValue<int>(ptr) + 0x8;
+                        LoadStatusVars["LoadingIcon"] = new Tuple<IntPtr, string>(ptr, "bool"); // Hoping it doesn't break on next game update
                         FoundVars["LoadingIcon"] = true;
                     }
                 }
 
                 if (!FoundVars["StatusString"])
                 {
-                    ptr = scanner.Scan(new SigScanTarget(12, "00 00 00 00 00 00 00 00 00 00 00 00 6C 6F 61 64") { OnFound = (p, s, addr) => addr });
+                    ptr = scanner.Scan(new SigScanTarget(3,
+                        "4C 8D 2D ????????",    // lea r13,[HaloInfinite.exe+4C9FDB0]  <---
+                        "33 C0")                // xor eax,eax
+                        { OnFound = (p, s, addr) => addr + 0x4 + p.ReadValue<int>(addr) + 0x1400 });
+                    // ptr = scanner.Scan(new SigScanTarget(12, "00 00 00 00 00 00 00 00 00 00 00 00 6C 6F 61 64") { OnFound = (p, s, addr) => addr });
                     if (ptr != IntPtr.Zero)
                     {
                         LoadStatusVars["StatusString"] = new Tuple<IntPtr, string>(ptr, "string");
@@ -208,7 +212,7 @@ init
                 if (!FoundVars["LoadScreen"])
                 {
                     ptr = scanner.Scan(new SigScanTarget(2,
-                        "80 3D ???????? 00",    // cmp byte ptr [HaloInfinite.exe+47E73E0]  <---
+                        "80 3D ???????? ??",    // cmp byte ptr [HaloInfinite.exe+47E73E0],00  <---
                         "74 17",                // je HaloInfinite.exe+3178704
                         "48 8D 0D ????????",    // lea rcx,[HaloInfinite.exe+47E73E8]
                         "E8 ????????",          // call HaloInfinite.exe+27D1BF0
@@ -223,22 +227,23 @@ init
 
                 if (!FoundVars["IsCutScene"])
                 {
-                    ptr = scanner.Scan(new SigScanTarget(3,
-                        "48 8D 05 ????????",   // lea rax,[HaloInfinite.exe+4845000]  <---
-                        "48 03 C8",            // add rcx,rax
-                        "39 99 ????????")      // cmp [rcx+00000278],ebx
-                        { OnFound = (p, s, addr) => addr + 0x4 + p.ReadValue<int>(addr) });
+                    ptr = scanner.Scan(new SigScanTarget(1,
+                        "E8 ????????",      // call HaloInfinite.exe+3269D90  <---
+                        "E8 ????????",      // call HaloInfinite.ManagedDebug_LogMessage
+                        "48 83 C4 30")      // add rsp,30
+                        { OnFound = (p, s, addr) => addr + 0x4 + p.ReadValue<int>(addr) + 0x52 });
                     if (ptr != IntPtr.Zero)
                     {
-                        LoadStatusVars["IsCutScene"] = new Tuple<IntPtr, string>(ptr + 0x278, "bool");
-                        FoundVars["IsCutScene"] = true;
+                        ptr += 0x4 + game.ReadValue<int>(ptr);
+                        LoadStatusVars["IsCutScene"] = new Tuple<IntPtr, string>(ptr, "bool");
+                        FoundVars["IsCutScene"] = true; 
                     }
                 }
 
                 if (!FoundVars["CampaignData"])
                 {
                     ptr = scanner.Scan(new SigScanTarget(3,
-                        "48 8D 3D ????????",    // lea rdi,[HaloInfinite.exe+482C908]
+                        "48 8D 3D ????????",    // lea rdi,[HaloInfinite.exe+482C908]  <---
                         "0F1F 84 00 ????????",  // nop dword ptr [rax+rax+00000000]
                         "48 8B 1F")             // mov rbx,[rdi]
                         { OnFound = (p, s, addr) => addr + 0x4 + p.ReadValue<int>(addr) });

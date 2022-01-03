@@ -238,9 +238,9 @@ init
                 if (!FoundVars["CampaignData"])
                 {
                     ptr = scanner.Scan(new SigScanTarget(3,
-                        "4C 8D 35 ????????",   // lea r14,[HaloInfinite.exe+482C908]  <---
-                        "48 8D 0D ????????",   // lea rcx,[HaloInfinite.exe+482C900]
-                        "66")                  // nop word ptr [rax+rax+00000000]    --> original code: 66 66 66 0F1F 84 00 00000000
+                        "48 8D 3D ????????",    // lea rdi,[HaloInfinite.exe+482C908]
+                        "0F1F 84 00 ????????",  // nop dword ptr [rax+rax+00000000]
+                        "48 8B 1F")             // mov rbx,[rdi]
                         { OnFound = (p, s, addr) => addr + 0x4 + p.ReadValue<int>(addr) });
                     if (ptr != IntPtr.Zero)
                     {

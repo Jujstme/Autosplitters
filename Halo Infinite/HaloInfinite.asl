@@ -3,7 +3,7 @@
 // Thanks to all guys who helped in writing this
 // Coding: Jujstme
 // contacts: just.tribe@gmail.com
-// Version: 1.0.4.2 (Jan 2nd, 2022)
+// Version: 1.0.4.3 (Jan 2nd, 2022)
 
 state("HaloInfinite") {}
 
@@ -139,7 +139,7 @@ init
                 { "StatusString",         new Tuple<IntPtr, string>(modules.First().BaseAddress + 0x4CA11B0, "string") },
                 { "LoadScreen",           new Tuple<IntPtr, string>(modules.First().BaseAddress + 0x47E73E0, "bool") },
                 { "LoadingIcon",          new Tuple<IntPtr, string>(modules.First().BaseAddress + 0x522A6D0, "bool") },
-                { "IsCutScene",           new Tuple<IntPtr, string>(modules.First().BaseAddress + 0x4845278, "bool") }
+                { "IsCutScene",           new Tuple<IntPtr, string>(modules.First().BaseAddress + 0x50D4630, "byte") }
             };
             PlotBoolsOffset = modules.First().BaseAddress + 0x482C908;
         break;
@@ -227,15 +227,12 @@ init
 
                 if (!FoundVars["IsCutScene"])
                 {
-                    ptr = scanner.Scan(new SigScanTarget(1,
-                        "E8 ????????",      // call HaloInfinite.exe+3269D90  <---
-                        "E8 ????????",      // call HaloInfinite.ManagedDebug_LogMessage
-                        "48 83 C4 30")      // add rsp,30
-                        { OnFound = (p, s, addr) => addr + 0x4 + p.ReadValue<int>(addr) + 0x52 });
+                    ptr = scanner.Scan(new SigScanTarget(3,
+                        "48 8B 0D ???????? 48 85 C9 74 7B")      // add rsp,30
+                        { OnFound = (p, s, addr) => addr + 0x4 + p.ReadValue<int>(addr) });
                     if (ptr != IntPtr.Zero)
                     {
-                        ptr += 0x4 + game.ReadValue<int>(ptr);
-                        LoadStatusVars["IsCutScene"] = new Tuple<IntPtr, string>(ptr, "bool");
+                        LoadStatusVars["IsCutScene"] = new Tuple<IntPtr, string>(ptr, "byte");
                         FoundVars["IsCutScene"] = true; 
                     }
                 }
@@ -306,11 +303,15 @@ update
 
     // If the timer isn't running (eg. a run reset), reset the splits dictionary
     if (timer.CurrentPhase == TimerPhase.NotRunning) { foreach (var s in new List<string>(vars.AlreadyTriggeredSplits.Keys)) vars.AlreadyTriggeredSplits[s] = false; }
+
+    // Cutscene flag (experimental)
+    if (vars.watchers["IsCutScene"].Current > vars.watchers["IsCutScene"].Old) current.IsCutsceneActive = true;
+    else if (vars.watchers["IsCutScene"].Current < vars.watchers["IsCutScene"].Old) current.IsCutsceneActive = false;
 }
 
 isLoading
 {
-    return current.IsLoading || (settings["pauseAtMainMenu"] && current.Map == vars.Maps.MainMenu) || (settings["pauseAtCutscenes"] && vars.watchers["IsCutScene"].Current);
+    return current.IsLoading || (settings["pauseAtMainMenu"] && current.Map == vars.Maps.MainMenu) || (settings["pauseAtCutscenes"] && current.IsCutsceneActive && current.Map != vars.Maps.MainMenu);
 }
 
 split

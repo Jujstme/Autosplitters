@@ -3,12 +3,16 @@
 // Thanks to all guys who helped in writing this
 // Coding: Jujstme
 // contacts: just.tribe@gmail.com
-// Version: 1.0.4.3 (Jan 2nd, 2022)
+// Version: 1.0.4.3 (Jan 5th, 2022)
 
 state("HaloInfinite") {}
 
 startup
 {
+    // Long list of settings we want to implement in the autosplitter.
+    // Settings that have "split" in their tooltip will be considered for the autosplitting dictionary
+    // Format:
+    //   { parent, settingID, settingText, settingToolTip, settingParent, defaultState }
     string[,] Settings =
     {
         { null,             "startOnWarship",         "Start the timer when gaining control on Warship Gbraakon", null, "false" },
@@ -90,7 +94,6 @@ startup
         vars.SplitBools.Add(Settings[i, 1], false);
         vars.AlreadyTriggeredSplits.Add(Settings[i, 1], false);
     }
-
 }
 
 init
@@ -139,7 +142,7 @@ init
                 { "StatusString",         new Tuple<IntPtr, string>(modules.First().BaseAddress + 0x4CA11B0, "string") },
                 { "LoadScreen",           new Tuple<IntPtr, string>(modules.First().BaseAddress + 0x47E73E0, "bool") },
                 { "LoadingIcon",          new Tuple<IntPtr, string>(modules.First().BaseAddress + 0x522A6D0, "bool") },
-                { "IsCutScene",           new Tuple<IntPtr, string>(modules.First().BaseAddress + 0x50D4630, "byte") }
+                { "CutSceneIndicator",    new Tuple<IntPtr, string>(modules.First().BaseAddress + 0x50D4630, "byte") }
             };
             PlotBoolsOffset = modules.First().BaseAddress + 0x482C908;
         break;
@@ -154,19 +157,13 @@ init
 
             IntPtr ptr;
             SignatureScanner scanner;
-            var FoundVars = new Dictionary<string, bool>{
-                { "LoadStatusPercentage", false },
-                { "LoadingIcon",          false },
-                { "StatusString",         false },
-                { "LoadScreen",           false },
-                { "IsCutScene",           false },
-                { "CampaignData",         false }
-            };
+            var FoundVars = new Dictionary<string, bool>();
 
             foreach (var page in memory.MemoryPages(true).Where(m => (long)m.BaseAddress >= (long)modules.First().BaseAddress))
             {
                 scanner = new SignatureScanner(memory, page.BaseAddress, (int)page.RegionSize);
 
+                if (!FoundVars.ContainsKey("LoadStatusPercentage")) FoundVars.Add("LoadStatusPercentage", false);
                 if (!FoundVars["LoadStatusPercentage"])
                 {
                     ptr = scanner.Scan(new SigScanTarget(10,
@@ -181,6 +178,7 @@ init
                     }
                 }
 
+                if (!FoundVars.ContainsKey("LoadingIcon")) FoundVars.Add("LoadingIcon", false);
                 if (!FoundVars["LoadingIcon"])
                 {
                     ptr = scanner.Scan(new SigScanTarget(1,
@@ -195,6 +193,7 @@ init
                     }
                 }
 
+                if (!FoundVars.ContainsKey("StatusString")) FoundVars.Add("StatusString", false);
                 if (!FoundVars["StatusString"])
                 {
                     ptr = scanner.Scan(new SigScanTarget(3,
@@ -209,6 +208,7 @@ init
                     }
                 }
 
+                if (!FoundVars.ContainsKey("LoadScreen")) FoundVars.Add("LoadScreen", false);
                 if (!FoundVars["LoadScreen"])
                 {
                     ptr = scanner.Scan(new SigScanTarget(2,
@@ -225,18 +225,26 @@ init
                     }
                 }
 
-                if (!FoundVars["IsCutScene"])
+                if (!FoundVars.ContainsKey("CutSceneIndicator")) FoundVars.Add("CutSceneIndicator", false);
+                if (!FoundVars["CutSceneIndicator"])
                 {
-                    ptr = scanner.Scan(new SigScanTarget(3,
-                        "48 8B 0D ???????? 48 85 C9 74 7B")      // add rsp,30
+                    ptr = scanner.Scan(new SigScanTarget(6,
+                        "48 8B 0B",             // mov rcx,[rbx]
+                        "48 FF 0D ????????",    // dec dword ptr [HaloInfinite.exe+50D4630]
+                        "48 8B 43 08",          // mov rax,[rbx+08]
+                        "48 89 08",             // mov [rax],rcx
+                        "48 8B 43 08",          // mov rax,[rbx+08]
+                        "48 89 41 08",          // mov [rcx+08],rax
+                        "48 8B 7B 18")          // mov rdi,[rbx+18]
                         { OnFound = (p, s, addr) => addr + 0x4 + p.ReadValue<int>(addr) });
                     if (ptr != IntPtr.Zero)
                     {
-                        LoadStatusVars["IsCutScene"] = new Tuple<IntPtr, string>(ptr, "byte");
-                        FoundVars["IsCutScene"] = true; 
+                        LoadStatusVars["CutSceneIndicator"] = new Tuple<IntPtr, string>(ptr, "byte");
+                        FoundVars["CutSceneIndicator"] = true; 
                     }
                 }
 
+                if (!FoundVars.ContainsKey("CampaignData")) FoundVars.Add("CampaignData", false);
                 if (!FoundVars["CampaignData"])
                 {
                     ptr = scanner.Scan(new SigScanTarget(3,
@@ -279,7 +287,7 @@ init
             case "bool": vars.watchers.Add(new MemoryWatcher<bool>(new DeepPointer(entry.Value.Item1)) { Name = entry.Key }); break;
         }
     }
-    foreach (KeyValuePair<string, int> entry in PlotBools) vars.watchers.Add(new MemoryWatcher<byte>(new DeepPointer(PlotBoolsOffset, entry.Value)) { Name = entry.Key });
+    foreach (var entry in PlotBools) vars.watchers.Add(new MemoryWatcher<byte>(new DeepPointer(PlotBoolsOffset, entry.Value)) { Name = entry.Key });
 
     // Ultimately, explicitly define current.Map here to avoid throwing an Exception during the first update
     current.Map = string.Empty;
@@ -305,13 +313,16 @@ update
     if (timer.CurrentPhase == TimerPhase.NotRunning) { foreach (var s in new List<string>(vars.AlreadyTriggeredSplits.Keys)) vars.AlreadyTriggeredSplits[s] = false; }
 
     // Cutscene flag (experimental)
-    if (vars.watchers["IsCutScene"].Current > vars.watchers["IsCutScene"].Old) current.IsCutsceneActive = true;
-    else if (vars.watchers["IsCutScene"].Current < vars.watchers["IsCutScene"].Old) current.IsCutsceneActive = false;
+    if (vars.watchers["CutSceneIndicator"].Current > vars.watchers["CutSceneIndicator"].Old) current.IsCutsceneActive = true;
+    else if (vars.watchers["CutSceneIndicator"].Current < vars.watchers["CutSceneIndicator"].Old) current.IsCutsceneActive = false;
 }
 
 isLoading
 {
-    return current.IsLoading || (settings["pauseAtMainMenu"] && current.Map == vars.Maps.MainMenu) || (settings["pauseAtCutscenes"] && current.IsCutsceneActive && current.Map != vars.Maps.MainMenu);
+    return
+        current.IsLoading
+        || (settings["pauseAtMainMenu"] && current.Map == vars.Maps.MainMenu)
+        || (settings["pauseAtCutscenes"] && current.IsCutsceneActive && current.Map != vars.Maps.MainMenu);
 }
 
 split
@@ -343,7 +354,7 @@ split
     vars.SplitBools["houseOfReckoning"] = !vars.AlreadyTriggeredSplits["houseOfReckoning"] && old.Map == vars.Maps.HouseOfReckoning && current.Map == vars.Maps.SilentAuditorium;
     vars.SplitBools["silentAuditorium"] = !vars.AlreadyTriggeredSplits["silentAuditorium"] && current.Map == vars.Maps.SilentAuditorium && vars.watchers["SilentAuditorium"].Changed && vars.watchers["SilentAuditorium"].Current == 10;
 
-    foreach (KeyValuePair<string, bool> entry in vars.SplitBools)
+    foreach (var entry in vars.SplitBools)
     {
         if (entry.Value)
         {
@@ -355,7 +366,8 @@ split
 
 start
 {
-    return settings["startOnWarship"] ? current.Map == vars.Maps.WarshipGbraakon && vars.watchers["WarshipGbraakonStartTrigger"].Current == 3 && !current.IsLoading
+    return settings["startOnWarship"]
+            ? current.Map == vars.Maps.WarshipGbraakon && vars.watchers["WarshipGbraakonStartTrigger"].Current == 3 && !current.IsLoading
             : current.Map == vars.Maps.WarshipGbraakon && old.IsLoading && !current.IsLoading && vars.watchers["WarshipGbraakonStartTrigger"].Current == 0;
 }
 

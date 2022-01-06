@@ -343,8 +343,8 @@ update
     current.IsLoading =
             vars.watchers["LoadStatus"].Current
             || vars.watchers["LoadStatus2"].Current > 0 && vars.watchers["LoadStatus2"].Current < 4
-            || (vars.watchers["LoadScreen"].Current >= 2 && vars.watchers["LoadScreen"].Current <= 4
-            || vars.watchers["LoadingIcon"].Current);
+            || vars.watchers["LoadScreen"].Current >= 2 && vars.watchers["LoadScreen"].Current <= 4
+            || vars.watchers["LoadingIcon"].Current;
     
     current.Map = vars.watchers["StatusString"].Current.Substring(vars.watchers["StatusString"].Current.LastIndexOf("\\") + 1);
 

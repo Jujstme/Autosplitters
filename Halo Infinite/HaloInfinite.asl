@@ -134,7 +134,7 @@ init
         case "v6.10020.19048.0":
             LoadStatusVars = new Dictionary<string, Tuple<IntPtr, string>>{
                 { "LoadStatus",           new Tuple<IntPtr, string>(modules.First().BaseAddress + 0x5007ADC, "bool") },
-                { "LoadStatus2",          new Tuple<IntPtr, string>(modules.First().BaseAddress + 0x4FFDD08, "byte") },
+                { "LoadStatus2",          new Tuple<IntPtr, string>(modules.First().BaseAddress + 0x4FFDD04, "byte") },
                 { "StatusString",         new Tuple<IntPtr, string>(modules.First().BaseAddress + 0x4CA11B0, "string") },
                 { "LoadScreen",           new Tuple<IntPtr, string>(modules.First().BaseAddress + 0x50A1A28, "long") },
                 { "LoadingIcon",          new Tuple<IntPtr, string>(modules.First().BaseAddress + 0x522A6D0, "bool") },

@@ -136,7 +136,7 @@ init
                 { "LoadStatus",           new Tuple<IntPtr, string>(modules.First().BaseAddress + 0x4FFDD04, "byte") },
                 { "LoadStatusPercentage", new Tuple<IntPtr, string>(modules.First().BaseAddress + 0x4FFDD08, "byte") },
                 { "StatusString",         new Tuple<IntPtr, string>(modules.First().BaseAddress + 0x4CA11B0, "string") },
-                { "LoadScreen",           new Tuple<IntPtr, string>(modules.First().BaseAddress + 0x47E73E0, "bool") },
+                { "LoadScreen",           new Tuple<IntPtr, string>(modules.First().BaseAddress + 0x50A1A28, "long") },
                 { "LoadingIcon",          new Tuple<IntPtr, string>(modules.First().BaseAddress + 0x522A6D0, "bool") },
                 { "IsLoadingInCutscene",  new Tuple<IntPtr, string>(modules.First().BaseAddress + 0x48A6AB7, "bool") }
             };
@@ -281,6 +281,7 @@ init
             case "byte": vars.watchers.Add(new MemoryWatcher<byte>(new DeepPointer(entry.Value.Item1)) { Name = entry.Key }); break;
             case "string": vars.watchers.Add(new StringWatcher(new DeepPointer(entry.Value.Item1), 255) { Name = entry.Key }); break;
             case "bool": vars.watchers.Add(new MemoryWatcher<bool>(new DeepPointer(entry.Value.Item1)) { Name = entry.Key }); break;
+            case "long": vars.watchers.Add(new MemoryWatcher<long>(new DeepPointer(entry.Value.Item1)) { Name = entry.Key }); break;
         }
     }
     foreach (var entry in PlotBools) vars.watchers.Add(new MemoryWatcher<byte>(new DeepPointer(PlotBoolsOffset, entry.Value)) { Name = entry.Key });
@@ -298,8 +299,8 @@ update
     vars.watchers.UpdateAll(game);
 
     // Explicitly define a couple of variables for easier access
-    current.IsLoading = vars.watchers["StatusString"].Current.Substring(0, vars.watchers["StatusString"].Current.LastIndexOf(" ")) == "loading" ||
-            vars.watchers["LoadStatus"].Current == 3 || vars.watchers["LoadingIcon"].Current || vars.watchers["LoadScreen"].Current ||
+    current.IsLoading = vars.watchers["LoadStatus"].Current == 3
+            || vars.watchers["LoadingIcon"].Current || vars.watchers["LoadScreen"].Current != 0 ||
             (vars.watchers["LoadStatusPercentage"].Current != 0 && vars.watchers["LoadStatusPercentage"].Current != 100) ||
             (vars.watchers["LoadStatusPercentage"].Current == 100 && vars.watchers["LoadStatus"].Current < 4);
     

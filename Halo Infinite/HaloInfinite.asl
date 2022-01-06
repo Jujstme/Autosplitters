@@ -133,8 +133,8 @@ init
     {
         case "v6.10020.19048.0":
             LoadStatusVars = new Dictionary<string, Tuple<IntPtr, string>>{
-                { "LoadStatus",           new Tuple<IntPtr, string>(modules.First().BaseAddress + 0x4FFDD04, "byte") },
-                { "LoadStatusPercentage", new Tuple<IntPtr, string>(modules.First().BaseAddress + 0x4FFDD08, "byte") },
+                { "LoadStatus",           new Tuple<IntPtr, string>(modules.First().BaseAddress + 0x5007ADC, "bool") },
+                { "LoadStatus2",          new Tuple<IntPtr, string>(modules.First().BaseAddress + 0x4FFDD08, "byte") },
                 { "StatusString",         new Tuple<IntPtr, string>(modules.First().BaseAddress + 0x4CA11B0, "string") },
                 { "LoadScreen",           new Tuple<IntPtr, string>(modules.First().BaseAddress + 0x50A1A28, "long") },
                 { "LoadingIcon",          new Tuple<IntPtr, string>(modules.First().BaseAddress + 0x522A6D0, "bool") },
@@ -144,6 +144,7 @@ init
         break;
 
         default:
+        throw new Exception(); // disable sigscanning for now
             // In case of a new game version, this part will attempt to use sigscanning to recover the memory offsets.
             // Note: sigscanning is potentially unrealiable due to how the anti-debug features of this game work.
 
@@ -299,10 +300,10 @@ update
     vars.watchers.UpdateAll(game);
 
     // Explicitly define a couple of variables for easier access
-    current.IsLoading = vars.watchers["LoadStatus"].Current == 3
-            || vars.watchers["LoadingIcon"].Current || vars.watchers["LoadScreen"].Current != 0 ||
-            (vars.watchers["LoadStatusPercentage"].Current != 0 && vars.watchers["LoadStatusPercentage"].Current != 100) ||
-            (vars.watchers["LoadStatusPercentage"].Current == 100 && vars.watchers["LoadStatus"].Current < 4);
+    current.IsLoading = vars.watchers["LoadStatus2"].Current > 0 && vars.watchers["LoadStatus2"].Current < 4
+            || vars.watchers["LoadStatus"].Current
+            || vars.watchers["LoadingIcon"].Current
+            || vars.watchers["LoadScreen"].Current != 0;
     
     current.Map = vars.watchers["StatusString"].Current.Substring(vars.watchers["StatusString"].Current.LastIndexOf("\\") + 1);
 

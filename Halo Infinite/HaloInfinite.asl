@@ -3,9 +3,10 @@
 // Thanks to all guys who helped in writing this
 // Coding: Jujstme
 // contacts: just.tribe@gmail.com
-// Version: 1.0.6.0 (Jan 6th, 2022)
+// Version: 1.0.6.1 (Jan 6th, 2022)
 
 /* Changelog
+    - 1.0.6.1: updated the LoadScreen variable
     - 1.0.6.0: fixed sigscanning
 */
 
@@ -137,7 +138,7 @@ init
      *   - LoadStatus: it's a byte, but treated as a bool, it fluctuates between 0 and 3, but basically tells the system when we are loading a map in the main menu
      *   - LoadStatus2: byte value, goes from 0 to 4. When 0, we are idling in the menu. When 4, we are ingame
      *   - StatusString: string variable that is used by the autosplitter to determine the current map
-     *   - LoadScreen: long value, it's non-zero when the main load screen is being displayed
+     *   - LoadScreen: it monitors the load splash screen. When the splash screen is displayed, the value can range between 2 and 4
      *   - LoadingIcon: bool value, tells us when the loading icon at the bottom left is being displayed. It allows to remove the load time at the door in Gbraakon
      *   - IsLoadingInCutscene: bool value, ugly hack used to remove time when the "loading" message is displayed during cutscenes
      *   - PlotBoolsOffset: it's the main offset used for the plot flags. Used for the actual autosplitting 
@@ -152,7 +153,7 @@ init
                 { "LoadStatus",           new Tuple<IntPtr, string>(modules.First().BaseAddress + 0x5007ADC, "bool") },
                 { "LoadStatus2",          new Tuple<IntPtr, string>(modules.First().BaseAddress + 0x4FFDD04, "byte") },
                 { "StatusString",         new Tuple<IntPtr, string>(modules.First().BaseAddress + 0x4CA11B0, "string") },
-                { "LoadScreen",           new Tuple<IntPtr, string>(modules.First().BaseAddress + 0x50A1A28, "long") },
+                { "LoadScreen",           new Tuple<IntPtr, string>(modules.First().BaseAddress + 0x50A1B0C, "byte") },
                 { "LoadingIcon",          new Tuple<IntPtr, string>(modules.First().BaseAddress + 0x522A6D0, "bool") },
                 { "IsLoadingInCutscene",  new Tuple<IntPtr, string>(modules.First().BaseAddress + 0x48A6AB7, "bool") }
             };
@@ -175,6 +176,7 @@ init
             {
                 scanner = new SignatureScanner(memory, page.BaseAddress, (int)page.RegionSize);
 
+                // LoadStatus
                 if (!FoundVars.ContainsKey("LoadStatus")) FoundVars.Add("LoadStatus", false);
                 if (!FoundVars["LoadStatus"])
                 {
@@ -195,6 +197,7 @@ init
                     }
                 }
 
+                // LoadStatus2
                 if (!FoundVars.ContainsKey("LoadStatus2")) FoundVars.Add("LoadStatus2", false);
                 if (!FoundVars["LoadStatus2"])
                 {
@@ -209,6 +212,7 @@ init
                     }
                 }
 
+                // StatusString
                 if (!FoundVars.ContainsKey("StatusString")) FoundVars.Add("StatusString", false);
                 if (!FoundVars["StatusString"])
                 {
@@ -223,22 +227,23 @@ init
                     }
                 }
 
+                // LoadScreen
                 if (!FoundVars.ContainsKey("LoadScreen")) FoundVars.Add("LoadScreen", false);
                 if (!FoundVars["LoadScreen"])
                 {
-                    ptr = scanner.Scan(new SigScanTarget(1,
-                        "E8 ????????",          // call HaloInfinite.exe+EB5960 <---
-                        "EB 2A",                // jmp HaloInfinite.exe+145EE92
-                        "E8 ????????")          // call HaloInfinite.exe+EB58D0
-                        { OnFound = (p, s, addr) => addr + 0x4 + p.ReadValue<int>(addr) + 0x7F + 0x3 });
+                    ptr = scanner.Scan(new SigScanTarget(2,
+                        "8B 0D ????????",   // mov ecx,[HaloInfinite.exe+50A1B0C]
+                        "83 E9 01",         // sub ecx,01
+                        "74 0A")            // je HaloInfinite.exe+145EC16
+                        { OnFound = (p, s, addr) => addr + 0x4 + p.ReadValue<int>(addr) });
                     if (ptr != IntPtr.Zero)
                     {
-                        ptr += 0x4 + game.ReadValue<int>(ptr);
-                        LoadStatusVars["LoadScreen"] = new Tuple<IntPtr, string>(ptr, "long");
+                        LoadStatusVars["LoadScreen"] = new Tuple<IntPtr, string>(ptr, "byte");
                         FoundVars["LoadScreen"] = true;
                     }
                 }
 
+                // LoadingIcon
                 if (!FoundVars.ContainsKey("LoadingIcon")) FoundVars.Add("LoadingIcon", false);
                 if (!FoundVars["LoadingIcon"])
                 {
@@ -254,6 +259,7 @@ init
                     }
                 }
 
+                // IsLoadingInCutscene
                 if (!FoundVars.ContainsKey("IsLoadingInCutscene")) FoundVars.Add("IsLoadingInCutscene", false);
                 if (!FoundVars["IsLoadingInCutscene"])
                 {
@@ -275,6 +281,7 @@ init
                     }
                 }
 
+                // PlotBoolsOffset
                 if (!FoundVars.ContainsKey("CampaignData")) FoundVars.Add("CampaignData", false);
                 if (!FoundVars["CampaignData"])
                 {
@@ -316,7 +323,6 @@ init
             case "byte": vars.watchers.Add(new MemoryWatcher<byte>(new DeepPointer(entry.Value.Item1)) { Name = entry.Key }); break;
             case "string": vars.watchers.Add(new StringWatcher(new DeepPointer(entry.Value.Item1), 255) { Name = entry.Key }); break;
             case "bool": vars.watchers.Add(new MemoryWatcher<bool>(new DeepPointer(entry.Value.Item1)) { Name = entry.Key }); break;
-            case "long": vars.watchers.Add(new MemoryWatcher<long>(new DeepPointer(entry.Value.Item1)) { Name = entry.Key }); break;
         }
     }
     foreach (var entry in PlotBools) vars.watchers.Add(new MemoryWatcher<byte>(new DeepPointer(PlotBoolsOffset, entry.Value)) { Name = entry.Key });
@@ -335,10 +341,10 @@ update
 
     // Explicitly define a couple of variables for easier access
     current.IsLoading =
-            vars.watchers["LoadStatus2"].Current > 0 && vars.watchers["LoadStatus2"].Current < 4
-            || vars.watchers["LoadStatus"].Current
-            || vars.watchers["LoadingIcon"].Current
-            || vars.watchers["LoadScreen"].Current != 0;
+            vars.watchers["LoadStatus"].Current
+            || vars.watchers["LoadStatus2"].Current > 0 && vars.watchers["LoadStatus2"].Current < 4
+            || (vars.watchers["LoadScreen"].Current >= 2 && vars.watchers["LoadScreen"].Current <= 4
+            || vars.watchers["LoadingIcon"].Current);
     
     current.Map = vars.watchers["StatusString"].Current.Substring(vars.watchers["StatusString"].Current.LastIndexOf("\\") + 1);
 

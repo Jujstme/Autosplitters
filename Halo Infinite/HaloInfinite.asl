@@ -3,7 +3,7 @@
 // Thanks to all guys who helped in writing this
 // Coding: Jujstme
 // contacts: just.tribe@gmail.com
-// Version: 1.0.4.3 (Jan 5th, 2022)
+// Version: 1.0.4.4 (Jan 5th, 2022)
 
 state("HaloInfinite") {}
 
@@ -15,11 +15,6 @@ startup
     //   { parent, settingID, settingText, settingToolTip, settingParent, defaultState }
     string[,] Settings =
     {
-        { null, "dummy1", "GAME TIME CALCULATION IS DISABLED <-- read notes", "---- Update Jan 5th, 2022 ----\nAs per HaloRuns rules, game time calculated by the autosplitter must not\nbe considered and game time has to be MANUALLY CALCULATED for each run.\n\nHence, game time calculation will be disabled for the forseeable future\nuntil new updates on timing rules.", "false"},
-        { null,             "startOnWarship",         "Start the timer when gaining control on Warship Gbraakon", null, "false" },
-        // { null,             "pauseAtCutscenes",       "Pause the game timer during cutscenes",       null,    "false" },
-        // { null,             "pauseAtMainMenu",        "Pause the game timer in the main menu",       null,    "false" },
-
         { null,             "autosplitting",          "Auto Splitting",               null, "true" },
 
         { "autosplitting",  "warshipGbraakon",        "Warship Gbraakon",             "Will trigger a split after completing the mission \"Warship Gbraakon\".",                             "true" },
@@ -143,7 +138,7 @@ init
                 { "StatusString",         new Tuple<IntPtr, string>(modules.First().BaseAddress + 0x4CA11B0, "string") },
                 { "LoadScreen",           new Tuple<IntPtr, string>(modules.First().BaseAddress + 0x47E73E0, "bool") },
                 { "LoadingIcon",          new Tuple<IntPtr, string>(modules.First().BaseAddress + 0x522A6D0, "bool") },
-                { "CutSceneIndicator",    new Tuple<IntPtr, string>(modules.First().BaseAddress + 0x50D4630, "byte") }
+                { "IsLoadingInCutscene",  new Tuple<IntPtr, string>(modules.First().BaseAddress + 0x48A6AB7, "bool") }
             };
             PlotBoolsOffset = modules.First().BaseAddress + 0x482C908;
         break;
@@ -201,7 +196,6 @@ init
                         "4C 8D 2D ????????",    // lea r13,[HaloInfinite.exe+4C9FDB0]  <---
                         "33 C0")                // xor eax,eax
                         { OnFound = (p, s, addr) => addr + 0x4 + p.ReadValue<int>(addr) + 0x1400 });
-                    // ptr = scanner.Scan(new SigScanTarget(12, "00 00 00 00 00 00 00 00 00 00 00 00 6C 6F 61 64") { OnFound = (p, s, addr) => addr });
                     if (ptr != IntPtr.Zero)
                     {
                         LoadStatusVars["StatusString"] = new Tuple<IntPtr, string>(ptr, "string");
@@ -229,6 +223,7 @@ init
                 if (!FoundVars.ContainsKey("CutSceneIndicator")) FoundVars.Add("CutSceneIndicator", false);
                 if (!FoundVars["CutSceneIndicator"])
                 {
+                    throw new Exception();
                     ptr = scanner.Scan(new SigScanTarget(6,
                         "48 8B 0B",             // mov rcx,[rbx]
                         "48 FF 0D ????????",    // dec dword ptr [HaloInfinite.exe+50D4630]
@@ -312,19 +307,11 @@ update
 
     // If the timer isn't running (eg. a run reset), reset the splits dictionary
     if (timer.CurrentPhase == TimerPhase.NotRunning) { foreach (var s in new List<string>(vars.AlreadyTriggeredSplits.Keys)) vars.AlreadyTriggeredSplits[s] = false; }
-
-    // Cutscene flag (experimental)
-    if (vars.watchers["CutSceneIndicator"].Current > vars.watchers["CutSceneIndicator"].Old) current.IsCutsceneActive = true;
-    else if (vars.watchers["CutSceneIndicator"].Current < vars.watchers["CutSceneIndicator"].Old) current.IsCutsceneActive = false;
 }
 
 isLoading
 {
-    return false;
-    //return
-    //    current.IsLoading
-    //    || (settings["pauseAtMainMenu"] && current.Map == vars.Maps.MainMenu)
-    //    || (settings["pauseAtCutscenes"] && current.IsCutsceneActive && current.Map != vars.Maps.MainMenu);
+    return current.IsLoading || vars.watchers["IsLoadingInCutscene"].Current;
 }
 
 split

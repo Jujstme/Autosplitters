@@ -15,9 +15,10 @@ startup
     //   { parent, settingID, settingText, settingToolTip, settingParent, defaultState }
     string[,] Settings =
     {
-        { null,             "startOnWarship",         "Start the timer when gaining control on Warship Gbraakon", null, "false" },
-        { null,             "pauseAtCutscenes",       "Pause the game timer during cutscenes",       null,    "false" },
-        { null,             "pauseAtMainMenu",        "Pause the game timer in the main menu",       null,    "false" },
+        { null, "dummy1", "GAME TIME CALCULATION IS DISABLED <-- read notes", "---- Update Jan 5th, 2022 ----\nAs per HaloRuns rules, game time calculated by the autosplitter must not\nbe considered and game time has to be MANUALLY CALCULATED for each run.\n\nHence, game time calculation will be disabled for the forseeable future\nuntil new updates on timing rules.", "false"},
+        // { null,             "startOnWarship",         "Start the timer when gaining control on Warship Gbraakon", null, "false" },
+        // { null,             "pauseAtCutscenes",       "Pause the game timer during cutscenes",       null,    "false" },
+        // { null,             "pauseAtMainMenu",        "Pause the game timer in the main menu",       null,    "false" },
 
         { null,             "autosplitting",          "Auto Splitting",               null, "true" },
 
@@ -319,10 +320,11 @@ update
 
 isLoading
 {
-    return
-        current.IsLoading
-        || (settings["pauseAtMainMenu"] && current.Map == vars.Maps.MainMenu)
-        || (settings["pauseAtCutscenes"] && current.IsCutsceneActive && current.Map != vars.Maps.MainMenu);
+    return false;
+    //return
+    //    current.IsLoading
+    //    || (settings["pauseAtMainMenu"] && current.Map == vars.Maps.MainMenu)
+    //    || (settings["pauseAtCutscenes"] && current.IsCutsceneActive && current.Map != vars.Maps.MainMenu);
 }
 
 split

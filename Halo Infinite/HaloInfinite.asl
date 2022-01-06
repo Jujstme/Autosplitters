@@ -15,6 +15,7 @@ startup
     //   { parent, settingID, settingText, settingToolTip, settingParent, defaultState }
     string[,] Settings =
     {
+        { null,             "startOnWarship",         "Start the timer only when gaining control on Warship Gbraakon", null, "false" },
         { null,             "autosplitting",          "Auto Splitting",               null, "true" },
 
         { "autosplitting",  "warshipGbraakon",        "Warship Gbraakon",             "Will trigger a split after completing the mission \"Warship Gbraakon\".",                             "true" },

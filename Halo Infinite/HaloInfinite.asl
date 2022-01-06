@@ -3,7 +3,11 @@
 // Thanks to all guys who helped in writing this
 // Coding: Jujstme
 // contacts: just.tribe@gmail.com
-// Version: 1.0.5.0 (Jan 5th, 2022)
+// Version: 1.0.6.0 (Jan 6th, 2022)
+
+/* Changelog
+    - 1.0.6.0: fixed sigscanning
+*/
 
 state("HaloInfinite") {}
 
@@ -16,6 +20,7 @@ startup
     string[,] Settings =
     {
         { null,             "startOnWarship",         "Start the timer only when gaining control on Warship Gbraakon", null, "false" },
+
         { null,             "autosplitting",          "Auto Splitting",               null, "true" },
 
         { "autosplitting",  "warshipGbraakon",        "Warship Gbraakon",             "Will trigger a split after completing the mission \"Warship Gbraakon\".",                             "true" },
@@ -97,7 +102,7 @@ init
 {
     // Identify the game version. This is used later, so if a game version is known, we can avoid using sigscanning.
     if (!new Dictionary<int, string>{
-        { 0x1263000, "v6.10020.17952.0" },
+        { 0x1263000, "v6.10020.17952.0" },      // This version will be recognized but will still trigger sigscanning, as I don't have offsets for this game version
         { 0x133F000, "v6.10020.19048.0" }
     }.TryGetValue(modules.Where(x => x.ModuleName == "Arbiter.dll").FirstOrDefault().ModuleMemorySize, out version)) version = "Unknown game version";
 
@@ -135,10 +140,11 @@ init
      *   - LoadScreen: long value, it's non-zero when the main load screen is being displayed
      *   - LoadingIcon: bool value, tells us when the loading icon at the bottom left is being displayed. It allows to remove the load time at the door in Gbraakon
      *   - IsLoadingInCutscene: bool value, ugly hack used to remove time when the "loading" message is displayed during cutscenes
+     *   - PlotBoolsOffset: it's the main offset used for the plot flags. Used for the actual autosplitting 
      */
 
-    // Use a switch statement so, if a game version is recognized, the script will directly grab whatever offsets I manually inputted here.
-    // Basically, we avoid using sigscanning, with all the associated headaches.
+    // We use a switch statement so, if a game version is recognized, the script will directly grab whatever offsets I manually inputted here.
+    // Basically, we want to avoid using sigscanning when possible, as this game and its anti-debug features don't really like it
     switch (version)
     {
         case "v6.10020.19048.0":
@@ -154,8 +160,8 @@ init
         break;
 
         default:
-            // In case of a new game version, this part will attempt to use sigscanning to recover the memory offsets.
-            // Note: sigscanning is potentially unrealiable due to how the anti-debug features of this game work.
+            // If we are dealing with a new or unsupported game version, we have no other choice than trying to use sigscanning.
+            // This portion of the code will then attempt to use sigscanning to recover the memory offsets.
 
             // If the game has been launched from less than 5 seconds, throw an exception and re-execute the script.
             // This is necessary to let the game decrypt some of the memory pages needed for sigscanning
@@ -172,10 +178,16 @@ init
                 if (!FoundVars.ContainsKey("LoadStatus")) FoundVars.Add("LoadStatus", false);
                 if (!FoundVars["LoadStatus"])
                 {
-                    ptr = scanner.Scan(new SigScanTarget(3,
-                        "0F BF 05 ????????",    // movsx eax,word ptr [HaloInfinite.exe+5007ADC]  <---
-                        "3B C6")                // cmp eax,esi
-                        { OnFound = (p, s, addr) => addr + 0x4 + p.ReadValue<int>(addr) });
+                    ptr = scanner.Scan(new SigScanTarget(6,
+                        "89 45 9C",                 // mov [rbp-64],eax
+                        "48 8B 05 ????????")        // mov rax,[HaloInfinite.exe+5007A50]
+                        { OnFound = (p, s, addr) => addr + 0x4 + p.ReadValue<int>(addr) + 0x8C });
+                            /* alternate sigscan that is guaranteed to work
+                                ptr = scanner.Scan(new SigScanTarget(3,
+                                    "0F BF 05 ????????",    // movsx eax,word ptr [HaloInfinite.exe+5007ADC]  <---
+                                    "3B C6")                // cmp eax,esi
+                                    { OnFound = (p, s, addr) => addr + 0x4 + p.ReadValue<int>(addr) });
+                            */
                     if (ptr != IntPtr.Zero)
                     {
                         LoadStatusVars["LoadStatus"] = new Tuple<IntPtr, string>(ptr, "bool");
@@ -188,7 +200,7 @@ init
                 {
                     ptr = scanner.Scan(new SigScanTarget(5,
                         "89 45 94",             // mov [rbp-6c],eax
-                        "8B 05 ????????")       // mov eax,[HaloInfinite.exe+4FFDD04]
+                        "8B 05 ????????")       // mov eax,[HaloInfinite.exe+4FFDD04]  <---
                         { OnFound = (p, s, addr) => addr + 0x4 + p.ReadValue<int>(addr) });
                     if (ptr != IntPtr.Zero)
                     {
@@ -245,11 +257,17 @@ init
                 if (!FoundVars.ContainsKey("IsLoadingInCutscene")) FoundVars.Add("IsLoadingInCutscene", false);
                 if (!FoundVars["IsLoadingInCutscene"])
                 {
-                    ptr = scanner.Scan(new SigScanTarget(2,
-                        "80 3D ???????? ??",    // cmp byte ptr [HaloInfinite.exe+48A6AB7],00
-                        "75 10",                // jne HaloInfinite.exe+DFC7AD
-                        "E8 ????????")          // call HaloInfinite.exe+DFC6A0
-                        { OnFound = (p, s, addr) => addr + 0x5 + p.ReadValue<int>(addr) });
+                    ptr = scanner.Scan(new SigScanTarget(6,
+                        "48 8B F9",             // mov rdi,rcx
+                        "48 8B 15 ????????")    // mov rdx,[HaloInfinite.exe+48A6508]  <---
+                        { OnFound = (p, s, addr) => addr + 0x4 + p.ReadValue<int>(addr) + 0x5AF });
+                        /* Alternate sigscan
+                            ptr = scanner.Scan(new SigScanTarget(3,
+                                "48 8B 3D ????????",    // mov rdi,[HaloInfinite.exe+48A6AA8]  <---
+                                "48 8B D9",             // mov rbx,rcx
+                                "48 8B 09")             // mov rcx,[rcx]
+                                { OnFound = (p, s, addr) => addr + 0x4 + p.ReadValue<int>(addr) + 0xF });
+                        */
                     if (ptr != IntPtr.Zero)
                     {
                         LoadStatusVars["IsLoadingInCutscene"] = new Tuple<IntPtr, string>(ptr, "bool");
@@ -291,7 +309,7 @@ init
 
     // Finally, once we have all the needed offsets, define our watchers
     vars.watchers = new MemoryWatcherList();
-    foreach (KeyValuePair<string, Tuple<IntPtr, string>> entry in LoadStatusVars)
+    foreach (var entry in LoadStatusVars)
     {
         switch (entry.Value.Item2)
         {

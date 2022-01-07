@@ -139,6 +139,7 @@ init
      *   - LoadStatus2: byte value, goes from 0 to 4. When 0, we are idling in the menu. When 4, we are ingame
      *   - StatusString: string variable that is used by the autosplitter to determine the current map
      *   - LoadScreen: it monitors the load splash screen. When the splash screen is displayed, the value can range between 2 and 4
+     *   - LoadScreen2: same as above but it seems to be related to the actual loading process. When the splash screen is displayed it becomes 1.
      *   - LoadingIcon: bool value, tells us when the loading icon at the bottom left is being displayed. It allows to remove the load time at the door in Gbraakon
      *   - IsLoadingInCutscene: bool value, ugly hack used to remove time when the "loading" message is displayed during cutscenes
      *   - PlotBoolsOffset: it's the main offset used for the plot flags. Used for the actual autosplitting 
@@ -154,6 +155,7 @@ init
                 { "LoadStatus2",          new Tuple<IntPtr, string>(modules.First().BaseAddress + 0x4FFDD04, "byte") },
                 { "StatusString",         new Tuple<IntPtr, string>(modules.First().BaseAddress + 0x4CA11B0, "string") },
                 { "LoadScreen",           new Tuple<IntPtr, string>(modules.First().BaseAddress + 0x50A1B0C, "byte") },
+                { "LoadScreen2",          new Tuple<IntPtr, string>(modules.First().BaseAddress + 0x452F7F8, "bool") }, ////
                 { "LoadingIcon",          new Tuple<IntPtr, string>(modules.First().BaseAddress + 0x522A6D0, "bool") },
                 { "IsLoadingInCutscene",  new Tuple<IntPtr, string>(modules.First().BaseAddress + 0x48A6AB7, "bool") }
             };
@@ -240,6 +242,21 @@ init
                     {
                         LoadStatusVars["LoadScreen"] = new Tuple<IntPtr, string>(ptr, "byte");
                         FoundVars["LoadScreen"] = true;
+                    }
+                }
+
+                // LoadScreen2
+                if (!FoundVars.ContainsKey("LoadScreen2")) FoundVars.Add("LoadScreen2", false);
+                if (!FoundVars["LoadScreen2"])
+                {
+                    ptr = scanner.Scan(new SigScanTarget(9,
+                        "C6 05 ???????? ??",    // mov byte ptr [HaloInfinite.exe+50AE27F],01
+                        "87 0D ????????")       // xchg [HaloInfinite.exe+452F768],ecx  <---
+                        { OnFound = (p, s, addr) => addr + 0x4 + p.ReadValue<int>(addr) + 0x90 });
+                    if (ptr != IntPtr.Zero)
+                    {
+                        LoadStatusVars["LoadScreen2"] = new Tuple<IntPtr, string>(ptr, "bool");
+                        FoundVars["LoadScreen2"] = true;
                     }
                 }
 
@@ -341,7 +358,8 @@ update
 
     // Explicitly define a couple of variables for easier access
     current.IsLoading =
-            vars.watchers["LoadStatus"].Current
+            vars.watchers["LoadScreen2"].Current
+            || vars.watchers["LoadStatus"].Current
             || vars.watchers["LoadStatus2"].Current > 0 && vars.watchers["LoadStatus2"].Current < 4
             || vars.watchers["LoadScreen"].Current >= 2 && vars.watchers["LoadScreen"].Current <= 4
             || vars.watchers["LoadingIcon"].Current;

@@ -3,9 +3,10 @@
 // Thanks to all guys who helped in writing this
 // Coding: Jujstme
 // contacts: just.tribe@gmail.com
-// Version: 1.0.6.1 (Jan 6th, 2022)
+// Version: 1.0.7 (Jan 9th, 2022)
 
 /* Changelog
+    - 1.0.7: completely reworked the load removal logic
     - 1.0.6.1: updated the LoadScreen variable
     - 1.0.6.0: fixed sigscanning
 */
@@ -113,7 +114,7 @@ init
 
     // Offset dictionaries
     var LoadStatusVars = new Dictionary<string, Tuple<IntPtr, string>>();
-    IntPtr PlotBoolsOffset = new IntPtr();
+    IntPtr PlotBoolsOffset = IntPtr.Zero;
 
     // These offsets should stay constant regardless of the game version... I hope.
     var PlotBools = new Dictionary<string, int>{
@@ -135,12 +136,11 @@ init
     };
 
     /* For the autosplitter to work we need 7 variables
-     *   - LoadStatus: it's a byte, but treated as a bool, it fluctuates between 0 and 3, but basically tells the system when we are loading a map in the main menu
+     *   - LoadStatus: it's a byte, but treated as a bool in the autosplitter. It fluctuates between 0 and 3, but basically tells the system when we are loading a map in the main menu
      *   - LoadStatus2: byte value, goes from 0 to 4. When 0, we are idling in the menu. When 4, we are ingame
+     *   - LoadSplashScreen: it monitors the load splash screen. When the splash screen is displayed, the value can range between 2 and 4
+     *   - DoNotFreeze: bool value. It's 0 whenever the game freezes due to loading. It's 1 otherwise
      *   - StatusString: string variable that is used by the autosplitter to determine the current map
-     *   - LoadScreen: it monitors the load splash screen. When the splash screen is displayed, the value can range between 2 and 4
-     *   - LoadScreen2: same as above but it seems to be related to the actual loading process. When the splash screen is displayed it becomes 1.
-     *   - LoadingIcon: bool value, tells us when the loading icon at the bottom left is being displayed. It allows to remove the load time at the door in Gbraakon
      *   - IsLoadingInCutscene: bool value, ugly hack used to remove time when the "loading" message is displayed during cutscenes
      *   - PlotBoolsOffset: it's the main offset used for the plot flags. Used for the actual autosplitting 
      */
@@ -153,10 +153,9 @@ init
             LoadStatusVars = new Dictionary<string, Tuple<IntPtr, string>>{
                 { "LoadStatus",           new Tuple<IntPtr, string>(modules.First().BaseAddress + 0x5007ADC, "bool") },
                 { "LoadStatus2",          new Tuple<IntPtr, string>(modules.First().BaseAddress + 0x4FFDD04, "byte") },
+                { "LoadSplashScreen",     new Tuple<IntPtr, string>(modules.First().BaseAddress + 0x50A1B0C, "byte") },
+                { "DoNotFreeze",          new Tuple<IntPtr, string>(modules.First().BaseAddress + 0x509E5BC, "bool") },
                 { "StatusString",         new Tuple<IntPtr, string>(modules.First().BaseAddress + 0x4CA11B0, "string") },
-                { "LoadScreen",           new Tuple<IntPtr, string>(modules.First().BaseAddress + 0x50A1B0C, "byte") },
-                { "LoadScreen2",          new Tuple<IntPtr, string>(modules.First().BaseAddress + 0x452F7F8, "bool") }, ////
-                { "LoadingIcon",          new Tuple<IntPtr, string>(modules.First().BaseAddress + 0x522A6D0, "bool") },
                 { "IsLoadingInCutscene",  new Tuple<IntPtr, string>(modules.First().BaseAddress + 0x48A6AB7, "bool") }
             };
             PlotBoolsOffset = modules.First().BaseAddress + 0x482C908;
@@ -186,12 +185,6 @@ init
                         "89 45 9C",                 // mov [rbp-64],eax
                         "48 8B 05 ????????")        // mov rax,[HaloInfinite.exe+5007A50]
                         { OnFound = (p, s, addr) => addr + 0x4 + p.ReadValue<int>(addr) + 0x8C });
-                            /* alternate sigscan that is guaranteed to work
-                                ptr = scanner.Scan(new SigScanTarget(3,
-                                    "0F BF 05 ????????",    // movsx eax,word ptr [HaloInfinite.exe+5007ADC]  <---
-                                    "3B C6")                // cmp eax,esi
-                                    { OnFound = (p, s, addr) => addr + 0x4 + p.ReadValue<int>(addr) });
-                            */
                     if (ptr != IntPtr.Zero)
                     {
                         LoadStatusVars["LoadStatus"] = new Tuple<IntPtr, string>(ptr, "bool");
@@ -214,6 +207,37 @@ init
                     }
                 }
 
+                // LoadSplashScreen
+                if (!FoundVars.ContainsKey("LoadSplashScreen")) FoundVars.Add("LoadSplashScreen", false);
+                if (!FoundVars["LoadSplashScreen"])
+                {
+                    ptr = scanner.Scan(new SigScanTarget(2,
+                        "8B 0D ????????",   // mov ecx,[HaloInfinite.exe+50A1B0C]
+                        "83 E9 01",         // sub ecx,01
+                        "74 0A")            // je HaloInfinite.exe+145EC16
+                        { OnFound = (p, s, addr) => addr + 0x4 + p.ReadValue<int>(addr) });
+                    if (ptr != IntPtr.Zero)
+                    {
+                        LoadStatusVars["LoadSplashScreen"] = new Tuple<IntPtr, string>(ptr, "byte");
+                        FoundVars["LoadSplashScreen"] = true;
+                    }
+                }
+
+                // DoNotFreeze
+                if (!FoundVars.ContainsKey("DoNotFreeze")) FoundVars.Add("DoNotFreeze", false);
+                if (!FoundVars["DoNotFreeze"])
+                {
+                    ptr = scanner.Scan(new SigScanTarget(5,
+                        "75 0F",            // jne HaloInfinite.exe+451B22
+                        "0FB6 05 ????????") // movzx eax,byte ptr [HaloInfinite.exe+509E5BC]  <---
+                        { OnFound = (p, s, addr) => addr + 0x4 + p.ReadValue<int>(addr) });
+                    if (ptr != IntPtr.Zero)
+                    {
+                        LoadStatusVars["DoNotFreeze"] = new Tuple<IntPtr, string>(ptr, "bool");
+                        FoundVars["DoNotFreeze"] = true;
+                    }
+                }
+
                 // StatusString
                 if (!FoundVars.ContainsKey("StatusString")) FoundVars.Add("StatusString", false);
                 if (!FoundVars["StatusString"])
@@ -229,53 +253,6 @@ init
                     }
                 }
 
-                // LoadScreen
-                if (!FoundVars.ContainsKey("LoadScreen")) FoundVars.Add("LoadScreen", false);
-                if (!FoundVars["LoadScreen"])
-                {
-                    ptr = scanner.Scan(new SigScanTarget(2,
-                        "8B 0D ????????",   // mov ecx,[HaloInfinite.exe+50A1B0C]
-                        "83 E9 01",         // sub ecx,01
-                        "74 0A")            // je HaloInfinite.exe+145EC16
-                        { OnFound = (p, s, addr) => addr + 0x4 + p.ReadValue<int>(addr) });
-                    if (ptr != IntPtr.Zero)
-                    {
-                        LoadStatusVars["LoadScreen"] = new Tuple<IntPtr, string>(ptr, "byte");
-                        FoundVars["LoadScreen"] = true;
-                    }
-                }
-
-                // LoadScreen2
-                if (!FoundVars.ContainsKey("LoadScreen2")) FoundVars.Add("LoadScreen2", false);
-                if (!FoundVars["LoadScreen2"])
-                {
-                    ptr = scanner.Scan(new SigScanTarget(9,
-                        "C6 05 ???????? ??",    // mov byte ptr [HaloInfinite.exe+50AE27F],01
-                        "87 0D ????????")       // xchg [HaloInfinite.exe+452F768],ecx  <---
-                        { OnFound = (p, s, addr) => addr + 0x4 + p.ReadValue<int>(addr) + 0x90 });
-                    if (ptr != IntPtr.Zero)
-                    {
-                        LoadStatusVars["LoadScreen2"] = new Tuple<IntPtr, string>(ptr, "bool");
-                        FoundVars["LoadScreen2"] = true;
-                    }
-                }
-
-                // LoadingIcon
-                if (!FoundVars.ContainsKey("LoadingIcon")) FoundVars.Add("LoadingIcon", false);
-                if (!FoundVars["LoadingIcon"])
-                {
-                    ptr = scanner.Scan(new SigScanTarget(1,
-                        "E8 ????????",         // call HaloInfinite.GameVariantProperty_SetStringIdProperty_ED50  <---
-                        "44 8B 3B")            // mov r15d,[rbx]
-                        { OnFound = (p, s, addr) => addr + 0x4 + p.ReadValue<int>(addr) + 0xBE + 0x3 });
-                    if (ptr != IntPtr.Zero)
-                    {
-                        ptr += 0x4 + game.ReadValue<int>(ptr) + 0x8;
-                        LoadStatusVars["LoadingIcon"] = new Tuple<IntPtr, string>(ptr, "bool"); // Hoping it doesn't break on next game update
-                        FoundVars["LoadingIcon"] = true;
-                    }
-                }
-
                 // IsLoadingInCutscene
                 if (!FoundVars.ContainsKey("IsLoadingInCutscene")) FoundVars.Add("IsLoadingInCutscene", false);
                 if (!FoundVars["IsLoadingInCutscene"])
@@ -284,13 +261,6 @@ init
                         "48 8B F9",             // mov rdi,rcx
                         "48 8B 15 ????????")    // mov rdx,[HaloInfinite.exe+48A6508]  <---
                         { OnFound = (p, s, addr) => addr + 0x4 + p.ReadValue<int>(addr) + 0x5AF });
-                        /* Alternate sigscan
-                            ptr = scanner.Scan(new SigScanTarget(3,
-                                "48 8B 3D ????????",    // mov rdi,[HaloInfinite.exe+48A6AA8]  <---
-                                "48 8B D9",             // mov rbx,rcx
-                                "48 8B 09")             // mov rcx,[rcx]
-                                { OnFound = (p, s, addr) => addr + 0x4 + p.ReadValue<int>(addr) + 0xF });
-                        */
                     if (ptr != IntPtr.Zero)
                     {
                         LoadStatusVars["IsLoadingInCutscene"] = new Tuple<IntPtr, string>(ptr, "bool");
@@ -358,11 +328,10 @@ update
 
     // Explicitly define a couple of variables for easier access
     current.IsLoading =
-            vars.watchers["LoadScreen2"].Current
-            || vars.watchers["LoadStatus"].Current
-            || vars.watchers["LoadStatus2"].Current > 0 && vars.watchers["LoadStatus2"].Current < 4
-            || vars.watchers["LoadScreen"].Current >= 2 && vars.watchers["LoadScreen"].Current <= 4
-            || vars.watchers["LoadingIcon"].Current;
+            vars.watchers["LoadStatus"].Current ||
+            !vars.watchers["DoNotFreeze"].Current ||
+            vars.watchers["LoadStatus2"].Current > 0 && vars.watchers["LoadStatus2"].Current < 4 ||
+            vars.watchers["LoadSplashScreen"].Current >= 1 && vars.watchers["LoadSplashScreen"].Current <= 4;
     
     current.Map = vars.watchers["StatusString"].Current.Substring(vars.watchers["StatusString"].Current.LastIndexOf("\\") + 1);
 

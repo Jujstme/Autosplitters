@@ -3,9 +3,10 @@
 // Thanks to all guys who helped in writing this
 // Coding: Jujstme
 // contacts: just.tribe@gmail.com
-// Version: 1.0.8.1 (Jan 15th, 2022)
+// Version: 1.0.8.2 (Jan 18th, 2022)
 
 /* Changelog
+    - 1.0.8.2: added support for version v6.10020.17952.0
     - 1.0.8.1: fixed a bug concerning the use of "old" and "current" state variables
     - 1.0.8: slightly improved splitting logic
     - 1.0.7: completely reworked the load removal logic
@@ -137,7 +138,7 @@ init
 {
     // Identify the game version. This is used later, so if a game version is known, we can avoid using sigscanning.
     if (!new Dictionary<int, string>{
-        { 0x1263000, "v6.10020.17952.0" },      // This version will be recognized but will still trigger sigscanning, as I don't have offsets for this game version
+        { 0x1263000, "v6.10020.17952.0" },
         { 0x133F000, "v6.10020.19048.0" }
     }.TryGetValue(modules.Where(x => x.ModuleName == "Arbiter.dll").FirstOrDefault().ModuleMemorySize, out version)) version = "Unknown game version";
 
@@ -182,6 +183,18 @@ init
     // Basically, we want to avoid using sigscanning when possible, as this game and its anti-debug features don't really like it
     switch (version)
     {
+        case "v6.10020.17952.0":
+            PlotBoolsOffset = modules.First().BaseAddress + 0x3E485C8;
+            LoadStatusVars = new Dictionary<string, Tuple<IntPtr, string>>{
+                { "LoadStatus",           new Tuple<IntPtr, string>(modules.First().BaseAddress + 0x433037C, "bool") },
+                { "LoadStatus2",          new Tuple<IntPtr, string>(modules.First().BaseAddress + 0x43265A4, "byte") },
+                { "LoadSplashScreen",     new Tuple<IntPtr, string>(modules.First().BaseAddress + 0x43A9384, "byte") },
+                { "DoNotFreeze",          new Tuple<IntPtr, string>(modules.First().BaseAddress + 0x43A8049, "bool") },
+                { "StatusString",         new Tuple<IntPtr, string>(modules.First().BaseAddress + 0x462F2C0, "string") },
+                { "IsLoadingInCutscene",  new Tuple<IntPtr, string>(modules.First().BaseAddress + 0x3EC2071, "bool") }
+            };
+        break;
+
         case "v6.10020.19048.0":
             PlotBoolsOffset = modules.First().BaseAddress + 0x482C908;
             LoadStatusVars = new Dictionary<string, Tuple<IntPtr, string>>{

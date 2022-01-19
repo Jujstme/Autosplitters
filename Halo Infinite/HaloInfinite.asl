@@ -3,9 +3,10 @@
 // Thanks to all guys who helped in writing this
 // Coding: Jujstme
 // contacts: just.tribe@gmail.com
-// Version: 1.0.8.2 (Jan 18th, 2022)
+// Version: 1.0.8.3 (Jan 19th, 2022)
 
 /* Changelog
+    - 1.0.8.3: added support for version v6.10021.10921.0 (Jan 19th 2022 patch)
     - 1.0.8.2: added support for version v6.10020.17952.0
     - 1.0.8.1: fixed a bug concerning the use of "old" and "current" state variables
     - 1.0.8: slightly improved splitting logic
@@ -139,7 +140,8 @@ init
     // Identify the game version. This is used later, so if a game version is known, we can avoid using sigscanning.
     if (!new Dictionary<int, string>{
         { 0x1263000, "v6.10020.17952.0" },
-        { 0x133F000, "v6.10020.19048.0" }
+        { 0x133F000, "v6.10020.19048.0" },
+        { 0x1262000, "v6.10021.10921.0" }
     }.TryGetValue(modules.Where(x => x.ModuleName == "Arbiter.dll").FirstOrDefault().ModuleMemorySize, out version)) version = "Unknown game version";
 
     // Basic variable, pretty self-explanatory.
@@ -204,6 +206,18 @@ init
                 { "DoNotFreeze",          new Tuple<IntPtr, string>(modules.First().BaseAddress + 0x509E5BC, "bool") },
                 { "StatusString",         new Tuple<IntPtr, string>(modules.First().BaseAddress + 0x4CA11B0, "string") },
                 { "IsLoadingInCutscene",  new Tuple<IntPtr, string>(modules.First().BaseAddress + 0x48A6AB7, "bool") }
+            };
+        break;
+
+        case "v6.10021.10921.0":
+            PlotBoolsOffset = modules.First().BaseAddress + 0x3E49588;
+            LoadStatusVars = new Dictionary<string, Tuple<IntPtr, string>>{
+                { "LoadStatus",           new Tuple<IntPtr, string>(modules.First().BaseAddress + 0x433133C, "bool") },
+                { "LoadStatus2",          new Tuple<IntPtr, string>(modules.First().BaseAddress + 0x4327564, "byte") },
+                { "LoadSplashScreen",     new Tuple<IntPtr, string>(modules.First().BaseAddress + 0x43AA344, "byte") },
+                { "DoNotFreeze",          new Tuple<IntPtr, string>(modules.First().BaseAddress + 0x43A9009, "bool") },
+                { "StatusString",         new Tuple<IntPtr, string>(modules.First().BaseAddress + 0x4630240, "string") },
+                { "IsLoadingInCutscene",  new Tuple<IntPtr, string>(modules.First().BaseAddress + 0x3EC3031, "bool") }
             };
         break;
 

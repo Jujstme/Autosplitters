@@ -3,9 +3,10 @@
 // Thanks to all guys who helped in writing this
 // Coding: Jujstme
 // contacts: just.tribe@gmail.com
-// Version: 1.0.8.3 (Jan 19th, 2022)
+// Version: 1.0.8.4 (Feb 5th, 2022)
 
 /* Changelog
+    - 1.0.8.4: added support for version v6.10021.11755.0 (Feb 4th 2022 patch)
     - 1.0.8.3: added support for version v6.10021.10921.0 (Jan 19th 2022 patch)
     - 1.0.8.2: added support for version v6.10020.17952.0
     - 1.0.8.1: fixed a bug concerning the use of "old" and "current" state variables
@@ -141,7 +142,8 @@ init
     if (!new Dictionary<int, string>{
         { 0x1263000, "v6.10020.17952.0" },
         { 0x133F000, "v6.10020.19048.0" },
-        { 0x1262000, "v6.10021.10921.0" }
+        { 0x1262000, "v6.10021.10921.0" },
+        { 0x125D000, "v6.10021.11755.0" }
     }.TryGetValue(modules.Where(x => x.ModuleName == "Arbiter.dll").FirstOrDefault().ModuleMemorySize, out version)) version = "Unknown game version";
 
     // Basic variable, pretty self-explanatory.
@@ -210,6 +212,7 @@ init
         break;
 
         case "v6.10021.10921.0":
+        case "v6.10021.11755.0":
             PlotBoolsOffset = modules.First().BaseAddress + 0x3E49588;
             LoadStatusVars = new Dictionary<string, Tuple<IntPtr, string>>{
                 { "LoadStatus",           new Tuple<IntPtr, string>(modules.First().BaseAddress + 0x433133C, "bool") },

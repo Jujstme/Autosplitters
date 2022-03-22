@@ -6,6 +6,7 @@
 // Version: 1.0.8.5 (Feb 25th, 2022)
 
 /* Changelog
+    - 1.0.8.6: added support for version v6.10021.12835.0 (new Arbiter.dll patch) (Mar 22nd, 2022)
     - 1.0.8.5: added support for version v6.10021.12835.0 (Feb 24th 2022 patch)
     - 1.0.8.4: added support for version v6.10021.11755.0 (Feb 4th 2022 patch)
     - 1.0.8.3: added support for version v6.10021.10921.0 (Jan 19th 2022 patch)
@@ -145,7 +146,8 @@ init
         { 0x133F000, "v6.10020.19048.0" },
         { 0x1262000, "v6.10021.10921.0" },
         { 0x125D000, "v6.10021.11755.0" },
-        { 0x17F7000, "v6.10021.12835.0" }
+        { 0x17F7000, "v6.10021.12835.0" },
+        { 0x1829000, "v6.10021.12835.0"}
     }.TryGetValue(modules.Where(x => x.ModuleName == "Arbiter.dll").FirstOrDefault().ModuleMemorySize, out version)) version = "Unknown game version";
 
     // Basic variable, pretty self-explanatory.

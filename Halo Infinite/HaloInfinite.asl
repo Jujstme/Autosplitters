@@ -147,7 +147,7 @@ init
         { 0x1262000, "v6.10021.10921.0" },
         { 0x125D000, "v6.10021.11755.0" },
         { 0x17F7000, "v6.10021.12835.0" },
-        { 0x1829000, "v6.10021.12835.0"}
+        { 0x1829000, "v6.10021.12835.0" }
     }.TryGetValue(modules.Where(x => x.ModuleName == "Arbiter.dll").FirstOrDefault().ModuleMemorySize, out version)) version = "Unknown game version";
 
     // Basic variable, pretty self-explanatory.

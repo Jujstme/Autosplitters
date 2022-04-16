@@ -3,9 +3,10 @@
 // Thanks to all guys who helped in writing this
 // Coding: Jujstme
 // contacts: just.tribe@gmail.com
-// Version: 1.0.8.5 (Feb 25th, 2022)
+// Version: 1.0.8.7 (Feb 25th, 2022)
 
 /* Changelog
+    - 1.0.8.7: fixed sigscanning
     - 1.0.8.6: added support for version v6.10021.12835.0 (new Arbiter.dll patch) (Mar 22nd, 2022)
     - 1.0.8.5: added support for version v6.10021.12835.0 (Feb 24th 2022 patch)
     - 1.0.8.4: added support for version v6.10021.11755.0 (Feb 4th 2022 patch)
@@ -247,6 +248,7 @@ init
             // If the game has been launched from less than 5 seconds, throw an exception and re-execute the script.
             // This is necessary to give the game enough time to decrypt some of the memory pages needed for sigscanning
             if (game.StartTime > DateTime.Now - TimeSpan.FromSeconds(5d)) throw new Exception("Game launched less than 5 seconds ago. Retrying...");
+            print("Finding addresses...");
 
             IntPtr ptr;
             SignatureScanner scanner;
@@ -260,12 +262,11 @@ init
                 if (!FoundVars.ContainsKey("LoadStatus")) FoundVars.Add("LoadStatus", false);
                 if (!FoundVars["LoadStatus"])
                 {
-                    ptr = scanner.Scan(new SigScanTarget(3,
-                        "48 8B 05 ????????",        // mov rax,[HaloInfinite.exe+5007A50]  <---
-                        "48 89 45 80")              // mov [rbp-80],rax
-                        { OnFound = (p, s, addr) => addr + 0x4 + p.ReadValue<int>(addr) + 0x8C });
+                    ptr = scanner.Scan(new SigScanTarget(4, "66 44 89 3D ???????? E8")
+                        { OnFound = (p, s, addr) => addr + 0x4 + p.ReadValue<int>(addr) });
                     if (ptr != IntPtr.Zero)
                     {
+                        print("Address found for LoadStatus at: 0x" + ptr.ToString("X"));
                         LoadStatusVars["LoadStatus"] = new Tuple<IntPtr, string>(ptr, "bool");
                         FoundVars["LoadStatus"] = true;
                     }
@@ -275,12 +276,11 @@ init
                 if (!FoundVars.ContainsKey("LoadStatus2")) FoundVars.Add("LoadStatus2", false);
                 if (!FoundVars["LoadStatus2"])
                 {
-                    ptr = scanner.Scan(new SigScanTarget(6,
-                        "89 44 24 74",           // mov [rsp+74],eax
-                        "8B 05 ????????")        // mov eax,[HaloInfinite.exe+4FFDD04]  <---
+                    ptr = scanner.Scan(new SigScanTarget(6, "89 44 24 74 8B 05")
                         { OnFound = (p, s, addr) => addr + 0x4 + p.ReadValue<int>(addr) });
                     if (ptr != IntPtr.Zero)
                     {
+                        print("Address found for LoadStatus2 at: 0x" + ptr.ToString("X"));
                         LoadStatusVars["LoadStatus2"] = new Tuple<IntPtr, string>(ptr, "byte");
                         FoundVars["LoadStatus2"] = true;
                     }
@@ -290,13 +290,11 @@ init
                 if (!FoundVars.ContainsKey("LoadSplashScreen")) FoundVars.Add("LoadSplashScreen", false);
                 if (!FoundVars["LoadSplashScreen"])
                 {
-                    ptr = scanner.Scan(new SigScanTarget(2,
-                        "83 3D ???????? ??",  // cmp dword ptr [HaloInfinite.exe+43AA344],03  <---
-                        "74 08",              // je HaloInfinite.exe+55B649
-                        "8A C3")              // mov al,bl
+                    ptr = scanner.Scan(new SigScanTarget(2, "83 3D ???????? ?? 74 08 8A C3")
                         { OnFound = (p, s, addr) => addr + 0x5 + p.ReadValue<int>(addr) });
                     if (ptr != IntPtr.Zero)
                     {
+                        print("Address found for LoadSplashScreen at: 0x" + ptr.ToString("X"));
                         LoadStatusVars["LoadSplashScreen"] = new Tuple<IntPtr, string>(ptr, "byte");
                         FoundVars["LoadSplashScreen"] = true;
                     }
@@ -306,13 +304,11 @@ init
                 if (!FoundVars.ContainsKey("DoNotFreeze")) FoundVars.Add("DoNotFreeze", false);
                 if (!FoundVars["DoNotFreeze"])
                 {
-                    ptr = scanner.Scan(new SigScanTarget(2,
-                        "8A 05 ????????",    // mov al,[HaloInfinite.exe+43A9009]  <---
-                        "3C 01",             // cmp al,01
-                        "74 09")             // je HaloInfinite.exe+823B37
+                    ptr = scanner.Scan(new SigScanTarget(2, "8A 05 ???????? 84 C0 75 1C")
                         { OnFound = (p, s, addr) => addr + 0x4 + p.ReadValue<int>(addr) });
                     if (ptr != IntPtr.Zero)
                     {
+                        print("Address found for DoNotFreeze at: 0x" + ptr.ToString("X"));
                         LoadStatusVars["DoNotFreeze"] = new Tuple<IntPtr, string>(ptr, "bool");
                         FoundVars["DoNotFreeze"] = true;
                     }
@@ -322,13 +318,11 @@ init
                 if (!FoundVars.ContainsKey("StatusString")) FoundVars.Add("StatusString", false);
                 if (!FoundVars["StatusString"])
                 {
-                    ptr = scanner.Scan(new SigScanTarget(5,
-                        "33 FF",                 // xor edi,edi
-                        "4C 8D 35 ????????",     // lea r14,[HaloInfinite.exe+4C9FDB0]  <---
-                        "33 C0")                 // xor eax,eax
+                    ptr = scanner.Scan(new SigScanTarget(3, "48 8D 0D ???????? 48 03 C8")
                         { OnFound = (p, s, addr) => addr + 0x4 + p.ReadValue<int>(addr) + 0x1400 });
                     if (ptr != IntPtr.Zero)
                     {
+                        print("Address found for StatusString at: 0x" + ptr.ToString("X"));
                         LoadStatusVars["StatusString"] = new Tuple<IntPtr, string>(ptr, "string");
                         FoundVars["StatusString"] = true;
                     }
@@ -338,12 +332,11 @@ init
                 if (!FoundVars.ContainsKey("IsLoadingInCutscene")) FoundVars.Add("IsLoadingInCutscene", false);
                 if (!FoundVars["IsLoadingInCutscene"])
                 {
-                    ptr = scanner.Scan(new SigScanTarget(6,
-                        "4D 8B C3",              // mov r8,r11
-                        "48 8B 1D ????????")     // mov rbx,[HaloInfinite.exe+3EC3028]  <---
-                        { OnFound = (p, s, addr) => addr + 0x4 + p.ReadValue<int>(addr) + 0x9 });
+                    ptr = scanner.Scan(new SigScanTarget(7, "49 C1 F8 02 48 8B 15")
+                        { OnFound = (p, s, addr) => addr + 0x4 + p.ReadValue<int>(addr) + 0x6021 });
                     if (ptr != IntPtr.Zero)
                     {
+                        print("Address found for IsLoadingInCutscene at: 0x" + ptr.ToString("X"));
                         LoadStatusVars["IsLoadingInCutscene"] = new Tuple<IntPtr, string>(ptr, "bool");
                         FoundVars["IsLoadingInCutscene"] = true; 
                     }
@@ -353,12 +346,11 @@ init
                 if (!FoundVars.ContainsKey("CampaignData")) FoundVars.Add("CampaignData", false);
                 if (!FoundVars["CampaignData"])
                 {
-                    ptr = scanner.Scan(new SigScanTarget(3,
-                        "48 8D 05 ????????",     // lea rax,[HaloInfinite.exe+3E49588]  <---
-                        "8B CA")                 // mov ecx,edx
+                    ptr = scanner.Scan(new SigScanTarget(3, "48 8D 0D ???????? 33 DB 8B C3 ")
                         { OnFound = (p, s, addr) => addr + 0x4 + p.ReadValue<int>(addr) });
                     if (ptr != IntPtr.Zero)
                     {
+                        print("Address found for CampaignData at: 0x" + ptr.ToString("X"));
                         PlotBoolsOffset = ptr;
                         FoundVars["CampaignData"] = true;
                     }

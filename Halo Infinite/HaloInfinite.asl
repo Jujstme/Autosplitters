@@ -3,10 +3,9 @@
 // Thanks to all guys who helped in writing this
 // Coding: Jujstme
 // contacts: just.tribe@gmail.com
-// Version: 1.0.8.7 (Feb 25th, 2022)
+// Version: 1.0.8.5 (Feb 25th, 2022)
 
 /* Changelog
-    - 1.0.8.7: fixed sigscanning
     - 1.0.8.6: added support for version v6.10021.12835.0 (new Arbiter.dll patch) (Mar 22nd, 2022)
     - 1.0.8.5: added support for version v6.10021.12835.0 (Feb 24th 2022 patch)
     - 1.0.8.4: added support for version v6.10021.11755.0 (Feb 4th 2022 patch)
@@ -346,7 +345,7 @@ init
                 if (!FoundVars.ContainsKey("CampaignData")) FoundVars.Add("CampaignData", false);
                 if (!FoundVars["CampaignData"])
                 {
-                    ptr = scanner.Scan(new SigScanTarget(3, "48 8D 0D ???????? 33 DB 8B C3 ")
+                    ptr = scanner.Scan(new SigScanTarget(3, "4C 8D 05 ???????? 66 0F 1F 44 00")
                         { OnFound = (p, s, addr) => addr + 0x4 + p.ReadValue<int>(addr) });
                     if (ptr != IntPtr.Zero)
                     {

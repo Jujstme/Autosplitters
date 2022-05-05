@@ -3,9 +3,10 @@
 // Thanks to all guys who helped in writing this
 // Coding: Jujstme
 // contacts: just.tribe@gmail.com
-// Version: 1.0.8.5 (Feb 25th, 2022)
+// Version: 1.0.9 (May 5th, 2022)
 
 /* Changelog
+    - 1.0.9: updated sigscans to work with Season2 patch
     - 1.0.8.6: added support for version v6.10021.12835.0 (new Arbiter.dll patch) (Mar 22nd, 2022)
     - 1.0.8.5: added support for version v6.10021.12835.0 (Feb 24th 2022 patch)
     - 1.0.8.4: added support for version v6.10021.11755.0 (Feb 4th 2022 patch)
@@ -136,10 +137,19 @@ startup
     vars.Map = new ExpandoObject();
     vars.Map.Old = string.Empty;
     vars.Map.Current = string.Empty;
+
+    // Debug
+    bool Debug = false;
+    vars.DebugPrint = (Action<string>)((string obj) => { if (Debug) print("[Halo Infinite] " + obj); });
 }
 
 init
 {
+    vars.DebugPrint("Autosplitter Init:");
+
+    var ArbiterModuleSize = modules.Where(x => x.ModuleName == "Arbiter.dll").FirstOrDefault().ModuleMemorySize;
+    vars.DebugPrint("  => Arbiter.dll module size: 0x" + ArbiterModuleSize.ToString("X"));
+
     // Identify the game version. This is used later, so if a game version is known, we can avoid using sigscanning.
     if (!new Dictionary<int, string>{
         { 0x1263000, "v6.10020.17952.0" },
@@ -147,8 +157,18 @@ init
         { 0x1262000, "v6.10021.10921.0" },
         { 0x125D000, "v6.10021.11755.0" },
         { 0x17F7000, "v6.10021.12835.0" },
-        { 0x1829000, "v6.10021.12835.0" }
-    }.TryGetValue(modules.Where(x => x.ModuleName == "Arbiter.dll").FirstOrDefault().ModuleMemorySize, out version)) version = "Unknown game version";
+        { 0x1829000, "v6.10021.12835.0" },
+        { 0x17DE000, "v6.10021.18539.0" },
+    }.TryGetValue(ArbiterModuleSize, out version))
+    {
+        vars.DebugPrint("   => Game version is not among the ones hardcoded in the autosplitter.");
+        vars.DebugPrint("   => Switching to sigscanning...");
+
+        //version = "Unknown game version";
+    } else {
+        vars.DebugPrint("  => Recognized game version: " + version);
+    }
+
 
     // Basic variable, pretty self-explanatory.
     // We will change it to false if we need to disable the autosplitter for whatever reason.
@@ -247,13 +267,13 @@ init
             // If the game has been launched from less than 5 seconds, throw an exception and re-execute the script.
             // This is necessary to give the game enough time to decrypt some of the memory pages needed for sigscanning
             if (game.StartTime > DateTime.Now - TimeSpan.FromSeconds(5d)) throw new Exception("Game launched less than 5 seconds ago. Retrying...");
-            print("Finding addresses...");
+            vars.DebugPrint("  => Finding addresses...");
 
             IntPtr ptr;
             SignatureScanner scanner;
             var FoundVars = new Dictionary<string, bool>();
 
-            foreach (var page in memory.MemoryPages(true).Where(m => (long)m.BaseAddress >= (long)modules.First().BaseAddress && (long)m.BaseAddress < (long)modules.First().BaseAddress + int.MaxValue))
+            foreach (var page in memory.MemoryPages(true).Where(m => (long)m.BaseAddress >= (long)modules.First().BaseAddress))
             {
                 scanner = new SignatureScanner(memory, page.BaseAddress, (int)page.RegionSize);
 
@@ -261,11 +281,11 @@ init
                 if (!FoundVars.ContainsKey("LoadStatus")) FoundVars.Add("LoadStatus", false);
                 if (!FoundVars["LoadStatus"])
                 {
-                    ptr = scanner.Scan(new SigScanTarget(4, "66 44 89 3D ???????? E8")
+                    ptr = scanner.Scan(new SigScanTarget(3, "0F BF 05 ???????? 3B C3")
                         { OnFound = (p, s, addr) => addr + 0x4 + p.ReadValue<int>(addr) });
                     if (ptr != IntPtr.Zero)
                     {
-                        print("Address found for LoadStatus at: 0x" + ptr.ToString("X"));
+                        vars.DebugPrint("   => Offset found for LoadStatus at: 0x" + ((long)ptr - (long)modules.First().BaseAddress).ToString("X") );
                         LoadStatusVars["LoadStatus"] = new Tuple<IntPtr, string>(ptr, "bool");
                         FoundVars["LoadStatus"] = true;
                     }
@@ -279,7 +299,7 @@ init
                         { OnFound = (p, s, addr) => addr + 0x4 + p.ReadValue<int>(addr) });
                     if (ptr != IntPtr.Zero)
                     {
-                        print("Address found for LoadStatus2 at: 0x" + ptr.ToString("X"));
+                        vars.DebugPrint("   => Offset found for LoadStatus2 at: 0x" + ((long)ptr - (long)modules.First().BaseAddress).ToString("X") );
                         LoadStatusVars["LoadStatus2"] = new Tuple<IntPtr, string>(ptr, "byte");
                         FoundVars["LoadStatus2"] = true;
                     }
@@ -289,11 +309,11 @@ init
                 if (!FoundVars.ContainsKey("LoadSplashScreen")) FoundVars.Add("LoadSplashScreen", false);
                 if (!FoundVars["LoadSplashScreen"])
                 {
-                    ptr = scanner.Scan(new SigScanTarget(2, "83 3D ???????? ?? 74 08 8A C3")
+                    ptr = scanner.Scan(new SigScanTarget(4, "32 DB 83 3D")
                         { OnFound = (p, s, addr) => addr + 0x5 + p.ReadValue<int>(addr) });
                     if (ptr != IntPtr.Zero)
                     {
-                        print("Address found for LoadSplashScreen at: 0x" + ptr.ToString("X"));
+                        vars.DebugPrint("   => Offset found for LoadSplashScreen at: 0x" + ((long)ptr - (long)modules.First().BaseAddress).ToString("X") );
                         LoadStatusVars["LoadSplashScreen"] = new Tuple<IntPtr, string>(ptr, "byte");
                         FoundVars["LoadSplashScreen"] = true;
                     }
@@ -303,11 +323,11 @@ init
                 if (!FoundVars.ContainsKey("DoNotFreeze")) FoundVars.Add("DoNotFreeze", false);
                 if (!FoundVars["DoNotFreeze"])
                 {
-                    ptr = scanner.Scan(new SigScanTarget(2, "8A 05 ???????? 84 C0 75 1C")
+                    ptr = scanner.Scan(new SigScanTarget(4, "75 0E 8A 05")
                         { OnFound = (p, s, addr) => addr + 0x4 + p.ReadValue<int>(addr) });
                     if (ptr != IntPtr.Zero)
                     {
-                        print("Address found for DoNotFreeze at: 0x" + ptr.ToString("X"));
+                        vars.DebugPrint("   => Offset found for DoNotFreeze at: 0x" + ((long)ptr - (long)modules.First().BaseAddress).ToString("X") );
                         LoadStatusVars["DoNotFreeze"] = new Tuple<IntPtr, string>(ptr, "bool");
                         FoundVars["DoNotFreeze"] = true;
                     }
@@ -321,7 +341,7 @@ init
                         { OnFound = (p, s, addr) => addr + 0x4 + p.ReadValue<int>(addr) + 0x1400 });
                     if (ptr != IntPtr.Zero)
                     {
-                        print("Address found for StatusString at: 0x" + ptr.ToString("X"));
+                        vars.DebugPrint("   => Offset found for StatusString at: 0x" + ((long)ptr - (long)modules.First().BaseAddress).ToString("X") );
                         LoadStatusVars["StatusString"] = new Tuple<IntPtr, string>(ptr, "string");
                         FoundVars["StatusString"] = true;
                     }
@@ -331,11 +351,11 @@ init
                 if (!FoundVars.ContainsKey("IsLoadingInCutscene")) FoundVars.Add("IsLoadingInCutscene", false);
                 if (!FoundVars["IsLoadingInCutscene"])
                 {
-                    ptr = scanner.Scan(new SigScanTarget(7, "49 C1 F8 02 48 8B 15")
+                    ptr = scanner.Scan(new SigScanTarget(3, "48 8B 3D ???????? 48 8B D9 48 8B 09")
                         { OnFound = (p, s, addr) => addr + 0x4 + p.ReadValue<int>(addr) + 0x6021 });
                     if (ptr != IntPtr.Zero)
                     {
-                        print("Address found for IsLoadingInCutscene at: 0x" + ptr.ToString("X"));
+                        vars.DebugPrint("   => Offset found for IsLoadingInCutscene at: 0x" + ((long)ptr - (long)modules.First().BaseAddress).ToString("X") );
                         LoadStatusVars["IsLoadingInCutscene"] = new Tuple<IntPtr, string>(ptr, "bool");
                         FoundVars["IsLoadingInCutscene"] = true; 
                     }
@@ -345,11 +365,11 @@ init
                 if (!FoundVars.ContainsKey("CampaignData")) FoundVars.Add("CampaignData", false);
                 if (!FoundVars["CampaignData"])
                 {
-                    ptr = scanner.Scan(new SigScanTarget(3, "4C 8D 05 ???????? 66 0F 1F 44 00")
+                    ptr = scanner.Scan(new SigScanTarget(3, "4C 8D 35 ???????? 4C 8D 25 ???????? 90")
                         { OnFound = (p, s, addr) => addr + 0x4 + p.ReadValue<int>(addr) });
                     if (ptr != IntPtr.Zero)
                     {
-                        print("Address found for CampaignData at: 0x" + ptr.ToString("X"));
+                        vars.DebugPrint("   => Offset found for CampaignData at: 0x" + ((long)ptr - (long)modules.First().BaseAddress).ToString("X") );
                         PlotBoolsOffset = ptr;
                         FoundVars["CampaignData"] = true;
                     }
@@ -361,14 +381,17 @@ init
 
             if (FoundVars.Any(m => !m.Value))
             {
+                foreach (var entry in FoundVars) { if (!entry.Value) vars.DebugPrint("   => WARNING: Failed to find offset for " + entry.Key + "!"); }
                 // If sigscanning fails, then disable the autosplitter and return.
                 // At this point, the only way to re-enable the autosplitter is to either relaunch LiveSplit, reopen the ASL script or re-launch the game.
+                vars.DebugPrint("  => Some addresses were not found. Disabling autosplitting functionality...");
                 MessageBox.Show("This game version is not currently supported by the autosplitter.\n\n" +
                                 "Load time removal and autosplitting functionality will be disabled.",
                                 "LiveSplit - Halo Infinite", MessageBoxButtons.OK, MessageBoxIcon.Information);
                 vars.IsAutosplitterEnabled = false;
                 return;
             }
+            vars.DebugPrint("  => All addresses found. No Errors.");
         break;
     }
 
@@ -385,6 +408,8 @@ init
     }
     foreach (var entry in PlotBools)
         vars.watchers.Add(new MemoryWatcher<byte>(new DeepPointer(PlotBoolsOffset, entry.Value)) { Name = entry.Key });
+
+    vars.DebugPrint("  => Init completed.");
 }
 
 update
@@ -419,7 +444,11 @@ split
         if (entry.Value())
         {
             vars.AlreadyTriggeredSplits[entry.Key] = true;
-            if (settings[entry.Key]) return true;
+            if (settings[entry.Key])
+            {
+                vars.DebugPrint("  => Split triggered. Split id: " + entry.Key);
+                return true;
+            } 
         }
     }
 }

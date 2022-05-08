@@ -3,9 +3,10 @@
 // Thanks to all guys who helped in writing this
 // Coding: Jujstme
 // contacts: just.tribe@gmail.com
-// Version: 1.0.9 (May 5th, 2022)
+// Version: 1.0.9.1 (May 8th, 2022)
 
 /* Changelog
+    - 1.0.9.1: Dropped sigscans because they don't work properly across different versions of the game. Rewrote the offsets manually
     - 1.0.9: updated sigscans to work with Season2 patch
     - 1.0.8.6: added support for version v6.10021.12835.0 (new Arbiter.dll patch) (Mar 22nd, 2022)
     - 1.0.8.5: added support for version v6.10021.12835.0 (Feb 24th 2022 patch)
@@ -139,7 +140,7 @@ startup
     vars.Map.Current = string.Empty;
 
     // Debug
-    bool Debug = false;
+    bool Debug = false;  // Disabled by default, as Halo's anti-cheat system actively monitors debug outputs
     vars.DebugPrint = (Action<string>)((string obj) => { if (Debug) print("[Halo Infinite] " + obj); });
 }
 
@@ -152,13 +153,14 @@ init
 
     // Identify the game version. This is used later, so if a game version is known, we can avoid using sigscanning.
     if (!new Dictionary<int, string>{
-        { 0x1263000, "v6.10020.17952.0" },
+        { 0x1263000, "v6.10020.17952.0" }, // Season 1
         { 0x133F000, "v6.10020.19048.0" },
         { 0x1262000, "v6.10021.10921.0" },
         { 0x125D000, "v6.10021.11755.0" },
         { 0x17F7000, "v6.10021.12835.0" },
         { 0x1829000, "v6.10021.12835.0" },
-        { 0x17DE000, "v6.10021.18539.0" },
+        { 0x1827000, "v6.10021.16272.0" },
+        { 0x17DE000, "v6.10021.18539.0" }, // Season 2
     }.TryGetValue(ArbiterModuleSize, out version))
     {
         vars.DebugPrint("   => Game version is not among the ones hardcoded in the autosplitter.");
@@ -168,7 +170,6 @@ init
     } else {
         vars.DebugPrint("  => Recognized game version: " + version);
     }
-
 
     // Basic variable, pretty self-explanatory.
     // We will change it to false if we need to disable the autosplitter for whatever reason.
@@ -212,7 +213,7 @@ init
     switch (version)
     {
         case "v6.10020.17952.0":
-            PlotBoolsOffset = modules.First().BaseAddress + 0x3E485C8;
+            PlotBoolsOffset = game.MemoryPages().FirstOrDefault(p => (int)p.RegionSize == 0x4B30000).BaseAddress; if (PlotBoolsOffset == IntPtr.Zero) throw new Exception(); PlotBoolsOffset += 0xF0560;
             LoadStatusVars = new Dictionary<string, Tuple<IntPtr, string>>{
                 { "LoadStatus",           new Tuple<IntPtr, string>(modules.First().BaseAddress + 0x433037C, "bool") },
                 { "LoadStatus2",          new Tuple<IntPtr, string>(modules.First().BaseAddress + 0x43265A4, "byte") },
@@ -224,7 +225,7 @@ init
         break;
 
         case "v6.10020.19048.0":
-            PlotBoolsOffset = modules.First().BaseAddress + 0x482C908;
+            PlotBoolsOffset = game.MemoryPages().FirstOrDefault(p => (int)p.RegionSize == 0x4B30000).BaseAddress; if (PlotBoolsOffset == IntPtr.Zero) throw new Exception(); PlotBoolsOffset += 0xF0560;
             LoadStatusVars = new Dictionary<string, Tuple<IntPtr, string>>{
                 { "LoadStatus",           new Tuple<IntPtr, string>(modules.First().BaseAddress + 0x5007ADC, "bool") },
                 { "LoadStatus2",          new Tuple<IntPtr, string>(modules.First().BaseAddress + 0x4FFDD04, "byte") },
@@ -237,7 +238,7 @@ init
 
         case "v6.10021.10921.0":
         case "v6.10021.11755.0":
-            PlotBoolsOffset = modules.First().BaseAddress + 0x3E49588;
+            PlotBoolsOffset = game.MemoryPages().FirstOrDefault(p => (int)p.RegionSize == 0x4B30000).BaseAddress; if (PlotBoolsOffset == IntPtr.Zero) throw new Exception(); PlotBoolsOffset += 0xF0560;
             LoadStatusVars = new Dictionary<string, Tuple<IntPtr, string>>{
                 { "LoadStatus",           new Tuple<IntPtr, string>(modules.First().BaseAddress + 0x433133C, "bool") },
                 { "LoadStatus2",          new Tuple<IntPtr, string>(modules.First().BaseAddress + 0x4327564, "byte") },
@@ -249,7 +250,7 @@ init
         break;
         
         case "v6.10021.12835.0":
-            PlotBoolsOffset = modules.First().BaseAddress + 0x4155BC8;
+            PlotBoolsOffset = game.MemoryPages().FirstOrDefault(p => (int)p.RegionSize == 0x4B30000).BaseAddress; if (PlotBoolsOffset == IntPtr.Zero) throw new Exception(); PlotBoolsOffset += 0xF0560;
             LoadStatusVars = new Dictionary<string, Tuple<IntPtr, string>>{
                 { "LoadStatus",           new Tuple<IntPtr, string>(modules.First().BaseAddress + 0x4643A1C, "bool") },
                 { "LoadStatus2",          new Tuple<IntPtr, string>(modules.First().BaseAddress + 0x4639C44, "byte") },
@@ -260,14 +261,38 @@ init
             };
         break;
 
-        default:
+        case "v6.10021.16272.0":
+            PlotBoolsOffset = game.MemoryPages().FirstOrDefault(p => (int)p.RegionSize == 0x4B30000).BaseAddress; if (PlotBoolsOffset == IntPtr.Zero) throw new Exception(); PlotBoolsOffset += 0xF0560;
+            LoadStatusVars = new Dictionary<string, Tuple<IntPtr, string>>{
+                { "LoadStatus",           new Tuple<IntPtr, string>(modules.First().BaseAddress + 0x4648ADC, "bool") },
+                { "LoadStatus2",          new Tuple<IntPtr, string>(modules.First().BaseAddress + 0x463ED04, "byte") },
+                { "LoadSplashScreen",     new Tuple<IntPtr, string>(modules.First().BaseAddress + 0x46B6684, "byte") },
+                { "DoNotFreeze",          new Tuple<IntPtr, string>(modules.First().BaseAddress + 0x46B5341, "bool") },
+                { "StatusString",         new Tuple<IntPtr, string>(modules.First().BaseAddress + 0x4931B60, "string") },
+                { "IsLoadingInCutscene",  new Tuple<IntPtr, string>(modules.First().BaseAddress + 0x41D47B1, "bool") }
+            };
+        break;
+
+        case "v6.10021.18539.0":  // Season 2
+            PlotBoolsOffset = game.MemoryPages().FirstOrDefault(p => (int)p.RegionSize == 0x4B30000).BaseAddress; if (PlotBoolsOffset == IntPtr.Zero) throw new Exception(); PlotBoolsOffset += 0xF0560 + 0x3FE8;
+            LoadStatusVars = new Dictionary<string, Tuple<IntPtr, string>>{
+                { "LoadStatus",           new Tuple<IntPtr, string>(modules.First().BaseAddress + 0x453C1EC, "bool") },
+                { "LoadStatus2",          new Tuple<IntPtr, string>(modules.First().BaseAddress + 0x4531C54, "byte") },
+                { "LoadSplashScreen",     new Tuple<IntPtr, string>(modules.First().BaseAddress + 0x45B88A4, "byte") },
+                { "DoNotFreeze",          new Tuple<IntPtr, string>(modules.First().BaseAddress + 0x45B7559, "bool") },
+                { "StatusString",         new Tuple<IntPtr, string>(modules.First().BaseAddress + 0x487EE00, "string") },
+                { "IsLoadingInCutscene",  new Tuple<IntPtr, string>(modules.First().BaseAddress + 0x40D9E90, "bool") }
+            };
+        break;
+
+        default: /*
             // If we are dealing with a new or unsupported game version, we have no other choice than trying to use sigscanning.
             // This portion of the code will then attempt to use sigscanning to recover the memory offsets.
 
             // If the game has been launched from less than 5 seconds, throw an exception and re-execute the script.
             // This is necessary to give the game enough time to decrypt some of the memory pages needed for sigscanning
             if (game.StartTime > DateTime.Now - TimeSpan.FromSeconds(5d)) throw new Exception("Game launched less than 5 seconds ago. Retrying...");
-            vars.DebugPrint("  => Finding addresses...");
+            vars.DebugPrint("  => Sigscanning - Finding base addresses and offsets...");
 
             IntPtr ptr;
             SignatureScanner scanner;
@@ -276,6 +301,19 @@ init
             foreach (var page in memory.MemoryPages(true).Where(m => (long)m.BaseAddress >= (long)modules.First().BaseAddress))
             {
                 scanner = new SignatureScanner(memory, page.BaseAddress, (int)page.RegionSize);
+
+                // Game Version
+                if (!FoundVars.ContainsKey("GameVersion")) FoundVars.Add("GameVersion", false);
+                if (!FoundVars["GameVersion"])
+                {
+                    ptr = scanner.Scan(new SigScanTarget(9, "00 00 62 75 69 6C 64 3A 20"));
+                    if (ptr != IntPtr.Zero)
+                    {
+                        version = "v" + game.ReadString(ptr, 15);
+                        vars.DebugPrint("   => Game version identified: " + version );
+                        FoundVars["GameVersion"] = true;
+                    }
+                }
 
                 // LoadStatus
                 if (!FoundVars.ContainsKey("LoadStatus")) FoundVars.Add("LoadStatus", false);
@@ -337,8 +375,7 @@ init
                 if (!FoundVars.ContainsKey("StatusString")) FoundVars.Add("StatusString", false);
                 if (!FoundVars["StatusString"])
                 {
-                    ptr = scanner.Scan(new SigScanTarget(3, "48 8D 0D ???????? 48 03 C8")
-                        { OnFound = (p, s, addr) => addr + 0x4 + p.ReadValue<int>(addr) + 0x1400 });
+                    ptr = scanner.Scan(new SigScanTarget(9, "00 00 00 00 00 00 00 00 00 6C 6F 61"));
                     if (ptr != IntPtr.Zero)
                     {
                         vars.DebugPrint("   => Offset found for StatusString at: 0x" + ((long)ptr - (long)modules.First().BaseAddress).ToString("X") );
@@ -351,27 +388,15 @@ init
                 if (!FoundVars.ContainsKey("IsLoadingInCutscene")) FoundVars.Add("IsLoadingInCutscene", false);
                 if (!FoundVars["IsLoadingInCutscene"])
                 {
-                    ptr = scanner.Scan(new SigScanTarget(3, "48 8B 3D ???????? 48 8B D9 48 8B 09")
-                        { OnFound = (p, s, addr) => addr + 0x4 + p.ReadValue<int>(addr) + 0x6021 });
+                    //ptr = scanner.Scan(new SigScanTarget(2, "C6 05 ???????? ?? 75 08")
+                    //    { OnFound = (p, s, addr) => addr + 0x5 + p.ReadValue<int>(addr) });
+                    ptr = scanner.Scan(new SigScanTarget(2, "88 0D ???????? 75 0A")
+                        { OnFound = (p, s, addr) => addr + 0x4 + p.ReadValue<int>(addr) });
                     if (ptr != IntPtr.Zero)
                     {
                         vars.DebugPrint("   => Offset found for IsLoadingInCutscene at: 0x" + ((long)ptr - (long)modules.First().BaseAddress).ToString("X") );
                         LoadStatusVars["IsLoadingInCutscene"] = new Tuple<IntPtr, string>(ptr, "bool");
                         FoundVars["IsLoadingInCutscene"] = true; 
-                    }
-                }
-
-                // PlotBoolsOffset
-                if (!FoundVars.ContainsKey("CampaignData")) FoundVars.Add("CampaignData", false);
-                if (!FoundVars["CampaignData"])
-                {
-                    ptr = scanner.Scan(new SigScanTarget(3, "4C 8D 35 ???????? 4C 8D 25 ???????? 90")
-                        { OnFound = (p, s, addr) => addr + 0x4 + p.ReadValue<int>(addr) });
-                    if (ptr != IntPtr.Zero)
-                    {
-                        vars.DebugPrint("   => Offset found for CampaignData at: 0x" + ((long)ptr - (long)modules.First().BaseAddress).ToString("X") );
-                        PlotBoolsOffset = ptr;
-                        FoundVars["CampaignData"] = true;
                     }
                 }
 
@@ -384,16 +409,19 @@ init
                 foreach (var entry in FoundVars) { if (!entry.Value) vars.DebugPrint("   => WARNING: Failed to find offset for " + entry.Key + "!"); }
                 // If sigscanning fails, then disable the autosplitter and return.
                 // At this point, the only way to re-enable the autosplitter is to either relaunch LiveSplit, reopen the ASL script or re-launch the game.
+                // throw new Exception();
                 vars.DebugPrint("  => Some addresses were not found. Disabling autosplitting functionality...");
+                */
                 MessageBox.Show("This game version is not currently supported by the autosplitter.\n\n" +
                                 "Load time removal and autosplitting functionality will be disabled.",
                                 "LiveSplit - Halo Infinite", MessageBoxButtons.OK, MessageBoxIcon.Information);
                 vars.IsAutosplitterEnabled = false;
                 return;
-            }
+//            }
             vars.DebugPrint("  => All addresses found. No Errors.");
         break;
     }
+
 
     // Finally, once we have all the needed offsets, define our watchers
     vars.watchers = new MemoryWatcherList();
@@ -407,7 +435,7 @@ init
         }
     }
     foreach (var entry in PlotBools)
-        vars.watchers.Add(new MemoryWatcher<byte>(new DeepPointer(PlotBoolsOffset, entry.Value)) { Name = entry.Key });
+        vars.watchers.Add(new MemoryWatcher<byte>(PlotBoolsOffset + entry.Value) { Name = entry.Key });
 
     vars.DebugPrint("  => Init completed.");
 }

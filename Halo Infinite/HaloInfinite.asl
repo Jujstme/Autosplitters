@@ -160,7 +160,7 @@ init
         { 0x17F7000, "v6.10021.12835.0" },
         { 0x1829000, "v6.10021.12835.0" },
         { 0x1827000, "v6.10021.16272.0" },
-        { 0x17DE000, "v6.10021.18539.0" }, // Season 2
+        // { 0x17DE000, "v6.10021.18539.0" }, // Season 2, disabled for now
     }.TryGetValue(ArbiterModuleSize, out version))
     {
         vars.DebugPrint("   => Game version is not among the ones hardcoded in the autosplitter.");
@@ -213,7 +213,7 @@ init
     switch (version)
     {
         case "v6.10020.17952.0":
-            PlotBoolsOffset = game.MemoryPages().FirstOrDefault(p => (int)p.RegionSize == 0x4B30000).BaseAddress; if (PlotBoolsOffset == IntPtr.Zero) throw new Exception(); PlotBoolsOffset += 0xF0560;
+            PlotBoolsOffset = modules.First().BaseAddress + 0x3E485C8;
             LoadStatusVars = new Dictionary<string, Tuple<IntPtr, string>>{
                 { "LoadStatus",           new Tuple<IntPtr, string>(modules.First().BaseAddress + 0x433037C, "bool") },
                 { "LoadStatus2",          new Tuple<IntPtr, string>(modules.First().BaseAddress + 0x43265A4, "byte") },
@@ -225,7 +225,7 @@ init
         break;
 
         case "v6.10020.19048.0":
-            PlotBoolsOffset = game.MemoryPages().FirstOrDefault(p => (int)p.RegionSize == 0x4B30000).BaseAddress; if (PlotBoolsOffset == IntPtr.Zero) throw new Exception(); PlotBoolsOffset += 0xF0560;
+            PlotBoolsOffset = modules.First().BaseAddress + 0x482C908;
             LoadStatusVars = new Dictionary<string, Tuple<IntPtr, string>>{
                 { "LoadStatus",           new Tuple<IntPtr, string>(modules.First().BaseAddress + 0x5007ADC, "bool") },
                 { "LoadStatus2",          new Tuple<IntPtr, string>(modules.First().BaseAddress + 0x4FFDD04, "byte") },
@@ -238,7 +238,7 @@ init
 
         case "v6.10021.10921.0":
         case "v6.10021.11755.0":
-            PlotBoolsOffset = game.MemoryPages().FirstOrDefault(p => (int)p.RegionSize == 0x4B30000).BaseAddress; if (PlotBoolsOffset == IntPtr.Zero) throw new Exception(); PlotBoolsOffset += 0xF0560;
+            PlotBoolsOffset = modules.First().BaseAddress + 0x3E49588;
             LoadStatusVars = new Dictionary<string, Tuple<IntPtr, string>>{
                 { "LoadStatus",           new Tuple<IntPtr, string>(modules.First().BaseAddress + 0x433133C, "bool") },
                 { "LoadStatus2",          new Tuple<IntPtr, string>(modules.First().BaseAddress + 0x4327564, "byte") },
@@ -250,7 +250,7 @@ init
         break;
         
         case "v6.10021.12835.0":
-            PlotBoolsOffset = game.MemoryPages().FirstOrDefault(p => (int)p.RegionSize == 0x4B30000).BaseAddress; if (PlotBoolsOffset == IntPtr.Zero) throw new Exception(); PlotBoolsOffset += 0xF0560;
+            PlotBoolsOffset = modules.First().BaseAddress + 0x4155BC8;
             LoadStatusVars = new Dictionary<string, Tuple<IntPtr, string>>{
                 { "LoadStatus",           new Tuple<IntPtr, string>(modules.First().BaseAddress + 0x4643A1C, "bool") },
                 { "LoadStatus2",          new Tuple<IntPtr, string>(modules.First().BaseAddress + 0x4639C44, "byte") },
@@ -262,7 +262,7 @@ init
         break;
 
         case "v6.10021.16272.0":
-            PlotBoolsOffset = game.MemoryPages().FirstOrDefault(p => (int)p.RegionSize == 0x4B30000).BaseAddress; if (PlotBoolsOffset == IntPtr.Zero) throw new Exception(); PlotBoolsOffset += 0xF0560;
+            PlotBoolsOffset = modules.First().BaseAddress + 0x415AC88;
             LoadStatusVars = new Dictionary<string, Tuple<IntPtr, string>>{
                 { "LoadStatus",           new Tuple<IntPtr, string>(modules.First().BaseAddress + 0x4648ADC, "bool") },
                 { "LoadStatus2",          new Tuple<IntPtr, string>(modules.First().BaseAddress + 0x463ED04, "byte") },
@@ -435,7 +435,7 @@ init
         }
     }
     foreach (var entry in PlotBools)
-        vars.watchers.Add(new MemoryWatcher<byte>(PlotBoolsOffset + entry.Value) { Name = entry.Key });
+        vars.watchers.Add(new MemoryWatcher<byte>(new DeepPointer(PlotBoolsOffset, entry.Value)) { Name = entry.Key });
 
     vars.DebugPrint("  => Init completed.");
 }

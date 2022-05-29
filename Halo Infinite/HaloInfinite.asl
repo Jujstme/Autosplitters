@@ -211,9 +211,9 @@ init
             vars.watchers.Add(new MemoryWatcher<byte>(new DeepPointer(modules.First().BaseAddress + 0x3E485C8, 0xB7364)) { Name = "WestAAGun" });
             vars.watchers.Add(new MemoryWatcher<byte>(new DeepPointer(modules.First().BaseAddress + 0x3E485C8, 0xB7384)) { Name = "PelicanSpartanKillers" });
             vars.watchers.Add(new MemoryWatcher<byte>(new DeepPointer(modules.First().BaseAddress + 0x3E485C8, 0xB9370)) { Name = "SequenceNorthernBeacon" });
-            vars.watchers.Add(new MemoryWatcher<byte>(new DeepPointer(modules.First().BaseAddress + 0x3E485C8, 0xB9370)) { Name = "SequenceSouthernBeacon" });
+            vars.watchers.Add(new MemoryWatcher<byte>(new DeepPointer(modules.First().BaseAddress + 0x3E485C8, 0xB9378)) { Name = "SequenceSouthernBeacon" });
             vars.watchers.Add(new MemoryWatcher<byte>(new DeepPointer(modules.First().BaseAddress + 0x3E485C8, 0xB9380)) { Name = "SequenceEasternBeacon" });
-            vars.watchers.Add(new MemoryWatcher<byte>(new DeepPointer(modules.First().BaseAddress + 0x3E485C8, 0xB9380)) { Name = "SequenceSouthwesternBeacon" });
+            vars.watchers.Add(new MemoryWatcher<byte>(new DeepPointer(modules.First().BaseAddress + 0x3E485C8, 0xB9388)) { Name = "SequenceSouthwesternBeacon" });
             vars.watchers.Add(new MemoryWatcher<byte>(new DeepPointer(modules.First().BaseAddress + 0x3E485C8, 0xB740C)) { Name = "SilentAuditorium" });			
         break;
 
@@ -235,9 +235,9 @@ init
             vars.watchers.Add(new MemoryWatcher<byte>(new DeepPointer(modules.First().BaseAddress + 0x482C908, 0xB7364)) { Name = "WestAAGun" });
             vars.watchers.Add(new MemoryWatcher<byte>(new DeepPointer(modules.First().BaseAddress + 0x482C908, 0xB7384)) { Name = "PelicanSpartanKillers" });
             vars.watchers.Add(new MemoryWatcher<byte>(new DeepPointer(modules.First().BaseAddress + 0x482C908, 0xB9370)) { Name = "SequenceNorthernBeacon" });
-            vars.watchers.Add(new MemoryWatcher<byte>(new DeepPointer(modules.First().BaseAddress + 0x482C908, 0xB9370)) { Name = "SequenceSouthernBeacon" });
+            vars.watchers.Add(new MemoryWatcher<byte>(new DeepPointer(modules.First().BaseAddress + 0x482C908, 0xB9378)) { Name = "SequenceSouthernBeacon" });
             vars.watchers.Add(new MemoryWatcher<byte>(new DeepPointer(modules.First().BaseAddress + 0x482C908, 0xB9380)) { Name = "SequenceEasternBeacon" });
-            vars.watchers.Add(new MemoryWatcher<byte>(new DeepPointer(modules.First().BaseAddress + 0x482C908, 0xB9380)) { Name = "SequenceSouthwesternBeacon" });
+            vars.watchers.Add(new MemoryWatcher<byte>(new DeepPointer(modules.First().BaseAddress + 0x482C908, 0xB9388)) { Name = "SequenceSouthwesternBeacon" });
             vars.watchers.Add(new MemoryWatcher<byte>(new DeepPointer(modules.First().BaseAddress + 0x482C908, 0xB740C)) { Name = "SilentAuditorium" });
         break;
 
@@ -260,9 +260,9 @@ init
             vars.watchers.Add(new MemoryWatcher<byte>(new DeepPointer(modules.First().BaseAddress + 0x3E49588, 0xB7364)) { Name = "WestAAGun" });
             vars.watchers.Add(new MemoryWatcher<byte>(new DeepPointer(modules.First().BaseAddress + 0x3E49588, 0xB7384)) { Name = "PelicanSpartanKillers" });
             vars.watchers.Add(new MemoryWatcher<byte>(new DeepPointer(modules.First().BaseAddress + 0x3E49588, 0xB9370)) { Name = "SequenceNorthernBeacon" });
-            vars.watchers.Add(new MemoryWatcher<byte>(new DeepPointer(modules.First().BaseAddress + 0x3E49588, 0xB9370)) { Name = "SequenceSouthernBeacon" });
+            vars.watchers.Add(new MemoryWatcher<byte>(new DeepPointer(modules.First().BaseAddress + 0x3E49588, 0xB9378)) { Name = "SequenceSouthernBeacon" });
             vars.watchers.Add(new MemoryWatcher<byte>(new DeepPointer(modules.First().BaseAddress + 0x3E49588, 0xB9380)) { Name = "SequenceEasternBeacon" });
-            vars.watchers.Add(new MemoryWatcher<byte>(new DeepPointer(modules.First().BaseAddress + 0x3E49588, 0xB9380)) { Name = "SequenceSouthwesternBeacon" });
+            vars.watchers.Add(new MemoryWatcher<byte>(new DeepPointer(modules.First().BaseAddress + 0x3E49588, 0xB9388)) { Name = "SequenceSouthwesternBeacon" });
             vars.watchers.Add(new MemoryWatcher<byte>(new DeepPointer(modules.First().BaseAddress + 0x3E49588, 0xB740C)) { Name = "SilentAuditorium" });
         break;
         
@@ -284,9 +284,9 @@ init
             vars.watchers.Add(new MemoryWatcher<byte>(new DeepPointer(modules.First().BaseAddress + 0x4155BC8, 0xB7364)) { Name = "WestAAGun" });
             vars.watchers.Add(new MemoryWatcher<byte>(new DeepPointer(modules.First().BaseAddress + 0x4155BC8, 0xB7384)) { Name = "PelicanSpartanKillers" });
             vars.watchers.Add(new MemoryWatcher<byte>(new DeepPointer(modules.First().BaseAddress + 0x4155BC8, 0xB9370)) { Name = "SequenceNorthernBeacon" });
-            vars.watchers.Add(new MemoryWatcher<byte>(new DeepPointer(modules.First().BaseAddress + 0x4155BC8, 0xB9370)) { Name = "SequenceSouthernBeacon" });
+            vars.watchers.Add(new MemoryWatcher<byte>(new DeepPointer(modules.First().BaseAddress + 0x4155BC8, 0xB9378)) { Name = "SequenceSouthernBeacon" });
             vars.watchers.Add(new MemoryWatcher<byte>(new DeepPointer(modules.First().BaseAddress + 0x4155BC8, 0xB9380)) { Name = "SequenceEasternBeacon" });
-            vars.watchers.Add(new MemoryWatcher<byte>(new DeepPointer(modules.First().BaseAddress + 0x4155BC8, 0xB9380)) { Name = "SequenceSouthwesternBeacon" });
+            vars.watchers.Add(new MemoryWatcher<byte>(new DeepPointer(modules.First().BaseAddress + 0x4155BC8, 0xB9388)) { Name = "SequenceSouthwesternBeacon" });
             vars.watchers.Add(new MemoryWatcher<byte>(new DeepPointer(modules.First().BaseAddress + 0x4155BC8, 0xB740C)) { Name = "SilentAuditorium" });
         break;
 
@@ -308,9 +308,9 @@ init
             vars.watchers.Add(new MemoryWatcher<byte>(new DeepPointer(modules.First().BaseAddress + 0x415AC88, 0xB7364)) { Name = "WestAAGun" });
             vars.watchers.Add(new MemoryWatcher<byte>(new DeepPointer(modules.First().BaseAddress + 0x415AC88, 0xB7384)) { Name = "PelicanSpartanKillers" });
             vars.watchers.Add(new MemoryWatcher<byte>(new DeepPointer(modules.First().BaseAddress + 0x415AC88, 0xB9370)) { Name = "SequenceNorthernBeacon" });
-            vars.watchers.Add(new MemoryWatcher<byte>(new DeepPointer(modules.First().BaseAddress + 0x415AC88, 0xB9370)) { Name = "SequenceSouthernBeacon" });
+            vars.watchers.Add(new MemoryWatcher<byte>(new DeepPointer(modules.First().BaseAddress + 0x415AC88, 0xB9378)) { Name = "SequenceSouthernBeacon" });
             vars.watchers.Add(new MemoryWatcher<byte>(new DeepPointer(modules.First().BaseAddress + 0x415AC88, 0xB9380)) { Name = "SequenceEasternBeacon" });
-            vars.watchers.Add(new MemoryWatcher<byte>(new DeepPointer(modules.First().BaseAddress + 0x415AC88, 0xB9380)) { Name = "SequenceSouthwesternBeacon" });
+            vars.watchers.Add(new MemoryWatcher<byte>(new DeepPointer(modules.First().BaseAddress + 0x415AC88, 0xB9388)) { Name = "SequenceSouthwesternBeacon" });
             vars.watchers.Add(new MemoryWatcher<byte>(new DeepPointer(modules.First().BaseAddress + 0x415AC88, 0xB740C)) { Name = "SilentAuditorium" });
         break;
 
@@ -333,9 +333,9 @@ init
             vars.watchers.Add(new MemoryWatcher<byte>(new DeepPointer(modules.First().BaseAddress + 0x415AC88, 0xB7364)) { Name = "WestAAGun" });
             vars.watchers.Add(new MemoryWatcher<byte>(new DeepPointer(modules.First().BaseAddress + 0x415AC88, 0xB7384)) { Name = "PelicanSpartanKillers" });
             vars.watchers.Add(new MemoryWatcher<byte>(new DeepPointer(modules.First().BaseAddress + 0x415AC88, 0xB9370)) { Name = "SequenceNorthernBeacon" });
-            vars.watchers.Add(new MemoryWatcher<byte>(new DeepPointer(modules.First().BaseAddress + 0x415AC88, 0xB9370)) { Name = "SequenceSouthernBeacon" });
+            vars.watchers.Add(new MemoryWatcher<byte>(new DeepPointer(modules.First().BaseAddress + 0x415AC88, 0xB9378)) { Name = "SequenceSouthernBeacon" });
             vars.watchers.Add(new MemoryWatcher<byte>(new DeepPointer(modules.First().BaseAddress + 0x415AC88, 0xB9380)) { Name = "SequenceEasternBeacon" });
-            vars.watchers.Add(new MemoryWatcher<byte>(new DeepPointer(modules.First().BaseAddress + 0x415AC88, 0xB9380)) { Name = "SequenceSouthwesternBeacon" });
+            vars.watchers.Add(new MemoryWatcher<byte>(new DeepPointer(modules.First().BaseAddress + 0x415AC88, 0xB9388)) { Name = "SequenceSouthwesternBeacon" });
             vars.watchers.Add(new MemoryWatcher<byte>(new DeepPointer(modules.First().BaseAddress + 0x415AC88, 0xB740C)) { Name = "SilentAuditorium" });
         break;
 
@@ -346,21 +346,21 @@ init
             vars.watchers.Add(new MemoryWatcher<bool>(new DeepPointer(modules.First().BaseAddress + 0x4970C49)) { Name = "DoNotFreeze" });
             vars.watchers.Add(new MemoryWatcher<bool>(new DeepPointer(modules.First().BaseAddress + 0x44E5E50)) { Name = "IsLoadingInCutscene" });
             vars.watchers.Add(new StringWatcher(new DeepPointer(modules.First().BaseAddress + 0x4C75320), 255) { Name = "StatusString" });
-            vars.watchers.Add(new MemoryWatcher<byte>(new DeepPointer(modules.First().BaseAddress + 0x446EDE0, 0xB55D0 + 0x3CF4)) { Name = "WarshipGbraakonStartTrigger" });
-            vars.watchers.Add(new MemoryWatcher<byte>(new DeepPointer(modules.First().BaseAddress + 0x446EDE0, 0xB5558 + 0x3CF4)) { Name = "OutpostTremonius" });
-            vars.watchers.Add(new MemoryWatcher<byte>(new DeepPointer(modules.First().BaseAddress + 0x446EDE0, 0xB746C + 0x3CF4)) { Name = "FOBGolf" });
-            vars.watchers.Add(new MemoryWatcher<byte>(new DeepPointer(modules.First().BaseAddress + 0x446EDE0, 0xB55B0 + 0x3CF4)) { Name = "Tower" });
-            vars.watchers.Add(new MemoryWatcher<byte>(new DeepPointer(modules.First().BaseAddress + 0x446EDE0, 0xB72BC + 0x3CF4)) { Name = "TravelToDigSite" });
-            vars.watchers.Add(new MemoryWatcher<byte>(new DeepPointer(modules.First().BaseAddress + 0x446EDE0, 0xB5308 + 0x3CF4)) { Name = "Spire" });
-            vars.watchers.Add(new MemoryWatcher<byte>(new DeepPointer(modules.First().BaseAddress + 0x446EDE0, 0xB7344 + 0x3CF4)) { Name = "EastAAGun" });
-            vars.watchers.Add(new MemoryWatcher<byte>(new DeepPointer(modules.First().BaseAddress + 0x446EDE0, 0xB7354 + 0x3CF4)) { Name = "NorthAAGun" });
-            vars.watchers.Add(new MemoryWatcher<byte>(new DeepPointer(modules.First().BaseAddress + 0x446EDE0, 0xB7364 + 0x3CF4)) { Name = "WestAAGun" });
-            vars.watchers.Add(new MemoryWatcher<byte>(new DeepPointer(modules.First().BaseAddress + 0x446EDE0, 0xB7384 + 0x3CF4)) { Name = "PelicanSpartanKillers" });
-            vars.watchers.Add(new MemoryWatcher<byte>(new DeepPointer(modules.First().BaseAddress + 0x446EDE0, 0xB9370 + 0x3CF4)) { Name = "SequenceNorthernBeacon" });
-            vars.watchers.Add(new MemoryWatcher<byte>(new DeepPointer(modules.First().BaseAddress + 0x446EDE0, 0xB9370 + 0x3CF4)) { Name = "SequenceSouthernBeacon" });
-            vars.watchers.Add(new MemoryWatcher<byte>(new DeepPointer(modules.First().BaseAddress + 0x446EDE0, 0xB9380 + 0x3CF4)) { Name = "SequenceEasternBeacon" });
-            vars.watchers.Add(new MemoryWatcher<byte>(new DeepPointer(modules.First().BaseAddress + 0x446EDE0, 0xB9380 + 0x3CF4)) { Name = "SequenceSouthwesternBeacon" });
-            vars.watchers.Add(new MemoryWatcher<byte>(new DeepPointer(modules.First().BaseAddress + 0x446EDE0, 0xB740C + 0x3CF4)) { Name = "SilentAuditorium" });
+            vars.watchers.Add(new MemoryWatcher<byte>(new DeepPointer(modules.First().BaseAddress + 0x446EDE0, 0xB92C4)) { Name = "WarshipGbraakonStartTrigger" });
+            vars.watchers.Add(new MemoryWatcher<byte>(new DeepPointer(modules.First().BaseAddress + 0x446EDE0, 0xB924C)) { Name = "OutpostTremonius" });
+            vars.watchers.Add(new MemoryWatcher<byte>(new DeepPointer(modules.First().BaseAddress + 0x446EDE0, 0xBB160)) { Name = "FOBGolf" });
+            vars.watchers.Add(new MemoryWatcher<byte>(new DeepPointer(modules.First().BaseAddress + 0x446EDE0, 0xB92A4)) { Name = "Tower" });
+            vars.watchers.Add(new MemoryWatcher<byte>(new DeepPointer(modules.First().BaseAddress + 0x446EDE0, 0xBAFB0)) { Name = "TravelToDigSite" });
+            vars.watchers.Add(new MemoryWatcher<byte>(new DeepPointer(modules.First().BaseAddress + 0x446EDE0, 0xB8FFC)) { Name = "Spire" });
+            vars.watchers.Add(new MemoryWatcher<byte>(new DeepPointer(modules.First().BaseAddress + 0x446EDE0, 0xBB038)) { Name = "EastAAGun" });
+            vars.watchers.Add(new MemoryWatcher<byte>(new DeepPointer(modules.First().BaseAddress + 0x446EDE0, 0xBB048)) { Name = "NorthAAGun" });
+            vars.watchers.Add(new MemoryWatcher<byte>(new DeepPointer(modules.First().BaseAddress + 0x446EDE0, 0xBB058)) { Name = "WestAAGun" });
+            vars.watchers.Add(new MemoryWatcher<byte>(new DeepPointer(modules.First().BaseAddress + 0x446EDE0, 0xBB078)) { Name = "PelicanSpartanKillers" });
+            vars.watchers.Add(new MemoryWatcher<byte>(new DeepPointer(modules.First().BaseAddress + 0x446EDE0, 0xBD064)) { Name = "SequenceNorthernBeacon" });
+            vars.watchers.Add(new MemoryWatcher<byte>(new DeepPointer(modules.First().BaseAddress + 0x446EDE0, 0xBD06C)) { Name = "SequenceSouthernBeacon" });
+            vars.watchers.Add(new MemoryWatcher<byte>(new DeepPointer(modules.First().BaseAddress + 0x446EDE0, 0xBD074)) { Name = "SequenceEasternBeacon" });
+            vars.watchers.Add(new MemoryWatcher<byte>(new DeepPointer(modules.First().BaseAddress + 0x446EDE0, 0xBD07C)) { Name = "SequenceSouthwesternBeacon" });
+            vars.watchers.Add(new MemoryWatcher<byte>(new DeepPointer(modules.First().BaseAddress + 0x446EDE0, 0xBB100)) { Name = "SilentAuditorium" });
         break;
 
         default:
@@ -370,9 +370,10 @@ init
                                 "Load time removal and autosplitting functionality will be disabled.",
                                 "LiveSplit - Halo Infinite", MessageBoxButtons.OK, MessageBoxIcon.Information);
                 vars.IsAutosplitterEnabled = false;
-                return;
             }
-		
+        break;
+
+        case "debug":		
             // This is used only for debug purposes for finding new offsets in recent patches
             if (game.StartTime > DateTime.Now - TimeSpan.FromSeconds(5d)) throw new Exception("Game launched less than 5 seconds ago. Retrying...");
             vars.DebugPrint("  => Sigscanning - Finding base addresses and offsets...");

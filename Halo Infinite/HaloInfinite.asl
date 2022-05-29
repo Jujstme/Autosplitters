@@ -3,9 +3,10 @@
 // Thanks to all guys who helped in writing this
 // Coding: Jujstme
 // contacts: just.tribe@gmail.com
-// Version: 1.0.10.0 (May 29th, 2022)
+// Version: 1.1.0.0 (May 29th, 2022)
 
 /* Changelog
+    - 1.1.0.0: completed adding support for all currently released versions of the game
     - 1.0.10.0: added support for v6.10022.10499.0
     - 1.0.9.1: Dropped sigscans because they don't work properly across different versions of the game. Rewrote the offsets manually
     - 1.0.9: updated sigscans to work with Season2 patch
@@ -85,9 +86,7 @@ startup
     vars.Maps.HouseOfReckoning = "dungeon_boss_hq_interior";
     vars.Maps.SilentAuditorium = "dungeon_cortana_palace";
 
-    // We need to define two dictionaries we will use to manage autosplitting
     // SplitBools: a dictionary of booleans that will tell us if we met the conditions to split at a certain point during the run
-    // AlreadyTriggeredSplits: pretty much self-explanatory, it records if we already triggered a certain splits, avoiding unwanted double splitting
     vars.SplitBools = new Dictionary<string, Func<bool>>{
         { "warshipGbraakon", () => !vars.AlreadyTriggeredSplits["warshipGbraakon"] && vars.Map.Old == vars.Maps.WarshipGbraakon && vars.Map.Current == vars.Maps.Foundation },
         { "foundation", () => !vars.AlreadyTriggeredSplits["foundation"] && vars.Map.Old == vars.Maps.Foundation && vars.Map.Current == vars.Maps.ZetaHalo },
@@ -116,9 +115,10 @@ startup
         { "houseOfReckoning", () => !vars.AlreadyTriggeredSplits["houseOfReckoning"] && vars.Map.Old == vars.Maps.HouseOfReckoning && vars.Map.Current == vars.Maps.SilentAuditorium },
         { "silentAuditorium", () => !vars.AlreadyTriggeredSplits["silentAuditorium"] && vars.Map.Current == vars.Maps.SilentAuditorium && vars.watchers["SilentAuditorium"].Changed && vars.watchers["SilentAuditorium"].Current == 10 }
     };
+
+    // AlreadyTriggeredSplits: pretty much self-explanatory, it records if we already triggered a certain splits, avoiding unwanted double splitting
     vars.AlreadyTriggeredSplits = new Dictionary<string, bool>();
-    foreach (var entry in vars.SplitBools.Keys)
-        vars.AlreadyTriggeredSplits.Add(entry, false);
+    foreach (var entry in vars.SplitBools.Keys) vars.AlreadyTriggeredSplits.Add(entry, false);
 
     // Define a GetCurrentMap function we use to get the current map name
     vars.GetCurrentMap = (Func<string>)(() => vars.watchers["StatusString"].Current.Substring(vars.watchers["StatusString"].Current.LastIndexOf("\\") + 1));
@@ -149,7 +149,7 @@ init
 {
     vars.DebugPrint("Autosplitter Init:");
 
-    var ArbiterModuleSize = modules.Where(x => x.ModuleName == "Arbiter.dll").FirstOrDefault().ModuleMemorySize;
+    var ArbiterModuleSize = modules.FirstOrDefault(x => x.ModuleName == "Arbiter.dll").ModuleMemorySize;
     vars.DebugPrint("  => Arbiter.dll module size: 0x" + ArbiterModuleSize.ToString("X"));
 
     // Identify the game version. This is used later, so if a game version is known, we can avoid using sigscanning.
@@ -161,16 +161,17 @@ init
         { 0x17F7000, "v6.10021.12835.0" },
         { 0x1829000, "v6.10021.12835.0" },
         { 0x1827000, "v6.10021.16272.0" },
-        // { 0x17DE000, "v6.10021.18539.0" }, // Season 2, disabled for now
+        { 0x17DE000, "v6.10021.18539.0" }, // Season 2
         { 0x1806000, "v6.10022.10499.0" },
     }.TryGetValue(ArbiterModuleSize, out version))
     {
         vars.DebugPrint("   => Game version is not among the ones hardcoded in the autosplitter.");
-        //vars.DebugPrint("   => Switching to sigscanning...");
         version = "Unknown game version";
     } else {
         vars.DebugPrint("  => Recognized game version: " + version);
     }
+
+    // version = "debug";
 
     // Basic variable, pretty self-explanatory.
     // We will change it to false if we need to disable the autosplitter for whatever reason.
@@ -321,22 +322,21 @@ init
             vars.watchers.Add(new MemoryWatcher<bool>(new DeepPointer(modules.First().BaseAddress + 0x45B7559)) { Name = "DoNotFreeze" });
             vars.watchers.Add(new MemoryWatcher<bool>(new DeepPointer(modules.First().BaseAddress + 0x40D9E90)) { Name = "IsLoadingInCutscene" });
             vars.watchers.Add(new StringWatcher(new DeepPointer(modules.First().BaseAddress + 0x487EE00), 255) { Name = "StatusString" });
-            // Needs good offsets for plot bools
-            vars.watchers.Add(new MemoryWatcher<byte>(new DeepPointer(modules.First().BaseAddress + 0x415AC88, 0xB55D0)) { Name = "WarshipGbraakonStartTrigger" });
-            vars.watchers.Add(new MemoryWatcher<byte>(new DeepPointer(modules.First().BaseAddress + 0x415AC88, 0xB5558)) { Name = "OutpostTremonius" });
-            vars.watchers.Add(new MemoryWatcher<byte>(new DeepPointer(modules.First().BaseAddress + 0x415AC88, 0xB746C)) { Name = "FOBGolf" });
-            vars.watchers.Add(new MemoryWatcher<byte>(new DeepPointer(modules.First().BaseAddress + 0x415AC88, 0xB55B0)) { Name = "Tower" });
-            vars.watchers.Add(new MemoryWatcher<byte>(new DeepPointer(modules.First().BaseAddress + 0x415AC88, 0xB72BC)) { Name = "TravelToDigSite" });
-            vars.watchers.Add(new MemoryWatcher<byte>(new DeepPointer(modules.First().BaseAddress + 0x415AC88, 0xB5308)) { Name = "Spire" });
-            vars.watchers.Add(new MemoryWatcher<byte>(new DeepPointer(modules.First().BaseAddress + 0x415AC88, 0xB7344)) { Name = "EastAAGun" });
-            vars.watchers.Add(new MemoryWatcher<byte>(new DeepPointer(modules.First().BaseAddress + 0x415AC88, 0xB7354)) { Name = "NorthAAGun" });
-            vars.watchers.Add(new MemoryWatcher<byte>(new DeepPointer(modules.First().BaseAddress + 0x415AC88, 0xB7364)) { Name = "WestAAGun" });
-            vars.watchers.Add(new MemoryWatcher<byte>(new DeepPointer(modules.First().BaseAddress + 0x415AC88, 0xB7384)) { Name = "PelicanSpartanKillers" });
-            vars.watchers.Add(new MemoryWatcher<byte>(new DeepPointer(modules.First().BaseAddress + 0x415AC88, 0xB9370)) { Name = "SequenceNorthernBeacon" });
-            vars.watchers.Add(new MemoryWatcher<byte>(new DeepPointer(modules.First().BaseAddress + 0x415AC88, 0xB9378)) { Name = "SequenceSouthernBeacon" });
-            vars.watchers.Add(new MemoryWatcher<byte>(new DeepPointer(modules.First().BaseAddress + 0x415AC88, 0xB9380)) { Name = "SequenceEasternBeacon" });
-            vars.watchers.Add(new MemoryWatcher<byte>(new DeepPointer(modules.First().BaseAddress + 0x415AC88, 0xB9388)) { Name = "SequenceSouthwesternBeacon" });
-            vars.watchers.Add(new MemoryWatcher<byte>(new DeepPointer(modules.First().BaseAddress + 0x415AC88, 0xB740C)) { Name = "SilentAuditorium" });
+            vars.watchers.Add(new MemoryWatcher<byte>(new DeepPointer(modules.First().BaseAddress + 0x4062E60, 0xB92C4)) { Name = "WarshipGbraakonStartTrigger" });
+            vars.watchers.Add(new MemoryWatcher<byte>(new DeepPointer(modules.First().BaseAddress + 0x4062E60, 0xB924C)) { Name = "OutpostTremonius" });
+            vars.watchers.Add(new MemoryWatcher<byte>(new DeepPointer(modules.First().BaseAddress + 0x4062E60, 0xBB160)) { Name = "FOBGolf" });
+            vars.watchers.Add(new MemoryWatcher<byte>(new DeepPointer(modules.First().BaseAddress + 0x4062E60, 0xB92A4)) { Name = "Tower" });
+            vars.watchers.Add(new MemoryWatcher<byte>(new DeepPointer(modules.First().BaseAddress + 0x4062E60, 0xBAFB0)) { Name = "TravelToDigSite" });
+            vars.watchers.Add(new MemoryWatcher<byte>(new DeepPointer(modules.First().BaseAddress + 0x4062E60, 0xB8FFC)) { Name = "Spire" });
+            vars.watchers.Add(new MemoryWatcher<byte>(new DeepPointer(modules.First().BaseAddress + 0x4062E60, 0xBB038)) { Name = "EastAAGun" });
+            vars.watchers.Add(new MemoryWatcher<byte>(new DeepPointer(modules.First().BaseAddress + 0x4062E60, 0xBB048)) { Name = "NorthAAGun" });
+            vars.watchers.Add(new MemoryWatcher<byte>(new DeepPointer(modules.First().BaseAddress + 0x4062E60, 0xBB058)) { Name = "WestAAGun" });
+            vars.watchers.Add(new MemoryWatcher<byte>(new DeepPointer(modules.First().BaseAddress + 0x4062E60, 0xBB078)) { Name = "PelicanSpartanKillers" });
+            vars.watchers.Add(new MemoryWatcher<byte>(new DeepPointer(modules.First().BaseAddress + 0x4062E60, 0xBD064)) { Name = "SequenceNorthernBeacon" });
+            vars.watchers.Add(new MemoryWatcher<byte>(new DeepPointer(modules.First().BaseAddress + 0x4062E60, 0xBD06C)) { Name = "SequenceSouthernBeacon" });
+            vars.watchers.Add(new MemoryWatcher<byte>(new DeepPointer(modules.First().BaseAddress + 0x4062E60, 0xBD074)) { Name = "SequenceEasternBeacon" });
+            vars.watchers.Add(new MemoryWatcher<byte>(new DeepPointer(modules.First().BaseAddress + 0x4062E60, 0xBD07C)) { Name = "SequenceSouthwesternBeacon" });
+            vars.watchers.Add(new MemoryWatcher<byte>(new DeepPointer(modules.First().BaseAddress + 0x4062E60, 0xBB100)) { Name = "SilentAuditorium" });
         break;
 
         case "v6.10022.10499.0":
@@ -364,23 +364,32 @@ init
         break;
 
         default:
-            if (true)
-            {     
-                MessageBox.Show("This game version is not currently supported by the autosplitter.\n\n" +
-                                "Load time removal and autosplitting functionality will be disabled.",
-                                "LiveSplit - Halo Infinite", MessageBoxButtons.OK, MessageBoxIcon.Information);
-                vars.IsAutosplitterEnabled = false;
-            }
+            MessageBox.Show("This game version is not currently supported by the autosplitter.\n\n" +
+                            "Load time removal and autosplitting functionality will be disabled.",
+                            "LiveSplit - Halo Infinite", MessageBoxButtons.OK, MessageBoxIcon.Information);
+            vars.IsAutosplitterEnabled = false;
         break;
 
         case "debug":		
-            // This is used only for debug purposes for finding new offsets in recent patches
+            // This is used only for debug purposes
             if (game.StartTime > DateTime.Now - TimeSpan.FromSeconds(5d)) throw new Exception("Game launched less than 5 seconds ago. Retrying...");
             vars.DebugPrint("  => Sigscanning - Finding base addresses and offsets...");
 
             IntPtr ptr;
             SignatureScanner scanner;
             var FoundVars = new Dictionary<string, bool>();
+            var autoScan = (Action<SignatureScanner, string, string, int, int>)((SignatureScanner s, string key, string sig, int offset, int offset2) => {
+                if (!FoundVars.ContainsKey(key)) FoundVars.Add(key, false);
+                if (!FoundVars[key])
+                {
+                    ptr = offset2 == 0x0 ? s.Scan(new SigScanTarget(offset, sig)) : s.Scan(new SigScanTarget(offset, sig) { OnFound = (p, ss, addr) => addr + offset2 + p.ReadValue<int>(addr) });
+                    if (ptr != IntPtr.Zero)
+                    {
+                        vars.DebugPrint("   => Offset found for " + key + " at: 0x" + ((long)ptr - (long)modules.First().BaseAddress).ToString("X") );
+                        FoundVars[key] = true;
+                    }
+                }
+            });
 
             foreach (var page in memory.MemoryPages(true).Where(m => (long)m.BaseAddress >= (long)modules.First().BaseAddress))
             {
@@ -400,100 +409,32 @@ init
                 }
 
                 // LoadStatus
-                if (!FoundVars.ContainsKey("LoadStatus")) FoundVars.Add("LoadStatus", false);
-                if (!FoundVars["LoadStatus"])
-                {
-                    ptr = scanner.Scan(new SigScanTarget(3, "0F BF 05 ???????? 3B C3")
-                        { OnFound = (p, s, addr) => addr + 0x4 + p.ReadValue<int>(addr) });
-                    if (ptr != IntPtr.Zero)
-                    {
-                        vars.DebugPrint("   => Offset found for LoadStatus at: 0x" + ((long)ptr - (long)modules.First().BaseAddress).ToString("X") );
-                        FoundVars["LoadStatus"] = true;
-                    }
-                }
+                autoScan(scanner, "LoadStatus", "0F BF 05 ???????? 3B C3", 3, 0x4);
 
                 // LoadStatus2
-                if (!FoundVars.ContainsKey("LoadStatus2")) FoundVars.Add("LoadStatus2", false);
-                if (!FoundVars["LoadStatus2"])
-                {
-                    ptr = scanner.Scan(new SigScanTarget(6, "89 44 24 74 8B 05")
-                        { OnFound = (p, s, addr) => addr + 0x4 + p.ReadValue<int>(addr) });
-                    if (ptr != IntPtr.Zero)
-                    {
-                        vars.DebugPrint("   => Offset found for LoadStatus2 at: 0x" + ((long)ptr - (long)modules.First().BaseAddress).ToString("X") );
-                        FoundVars["LoadStatus2"] = true;
-                    }
-                }
+                autoScan(scanner, "LoadStatus2", "89 44 24 74 8B 05", 6, 0x4);
 
                 // LoadSplashScreen
-                if (!FoundVars.ContainsKey("LoadSplashScreen")) FoundVars.Add("LoadSplashScreen", false);
-                if (!FoundVars["LoadSplashScreen"])
-                {
-                    ptr = scanner.Scan(new SigScanTarget(4, "32 DB 83 3D")
-                        { OnFound = (p, s, addr) => addr + 0x5 + p.ReadValue<int>(addr) });
-                    if (ptr != IntPtr.Zero)
-                    {
-                        vars.DebugPrint("   => Offset found for LoadSplashScreen at: 0x" + ((long)ptr - (long)modules.First().BaseAddress).ToString("X") );
-                        FoundVars["LoadSplashScreen"] = true;
-                    }
-                }
+                autoScan(scanner, "LoadSplashScreen", "32 DB 83 3D", 4, 0x5);
 
                 // DoNotFreeze
-                if (!FoundVars.ContainsKey("DoNotFreeze")) FoundVars.Add("DoNotFreeze", false);
-                if (!FoundVars["DoNotFreeze"])
-                {
-                    ptr = scanner.Scan(new SigScanTarget(4, "75 0E 8A 05")
-                        { OnFound = (p, s, addr) => addr + 0x4 + p.ReadValue<int>(addr) });
-                    if (ptr != IntPtr.Zero)
-                    {
-                        vars.DebugPrint("   => Offset found for DoNotFreeze at: 0x" + ((long)ptr - (long)modules.First().BaseAddress).ToString("X") );
-                        FoundVars["DoNotFreeze"] = true;
-                    }
-                }
+                autoScan(scanner, "DoNotFreeze", "75 0E 8A 05", 4, 0x4);
 
                 // StatusString
-                if (!FoundVars.ContainsKey("StatusString")) FoundVars.Add("StatusString", false);
-                if (!FoundVars["StatusString"])
-                {
-                    ptr = scanner.Scan(new SigScanTarget(9, "00 00 00 00 00 00 00 00 00 6C 6F 61"));
-                    if (ptr != IntPtr.Zero)
-                    {
-                        vars.DebugPrint("   => Offset found for StatusString at: 0x" + ((long)ptr - (long)modules.First().BaseAddress).ToString("X") );
-                        FoundVars["StatusString"] = true;
-                    }
-                }
+                autoScan(scanner, "StatusString", "00 00 00 00 00 00 00 00 00 6C 6F 61", 9, 0x0);
 
                 // IsLoadingInCutscene
-                if (!FoundVars.ContainsKey("IsLoadingInCutscene")) FoundVars.Add("IsLoadingInCutscene", false);
-                if (!FoundVars["IsLoadingInCutscene"])
-                {
-                    //ptr = scanner.Scan(new SigScanTarget(2, "C6 05 ???????? ?? 75 08")
-                    //    { OnFound = (p, s, addr) => addr + 0x5 + p.ReadValue<int>(addr) });
-                    ptr = scanner.Scan(new SigScanTarget(2, "88 0D ???????? 75 0A")
-                        { OnFound = (p, s, addr) => addr + 0x4 + p.ReadValue<int>(addr) });
-                    if (ptr != IntPtr.Zero)
-                    {
-                        vars.DebugPrint("   => Offset found for IsLoadingInCutscene at: 0x" + ((long)ptr - (long)modules.First().BaseAddress).ToString("X") );
-                        FoundVars["IsLoadingInCutscene"] = true; 
-                    }
-                }
+                autoScan(scanner, "IsLoadingInCutscene", "88 0D ???????? 75 0A", 2, 0x4);
 
                 // If the script successfully found all the addresses, there's no need to continue the loop, so break it
                 if (FoundVars.All(m => m.Value)) break;
             }
 
+            vars.IsAutosplitterEnabled = false;
+            
             if (FoundVars.Any(m => !m.Value))
             {
                 foreach (var entry in FoundVars) { if (!entry.Value) vars.DebugPrint("   => WARNING: Failed to find offset for " + entry.Key + "!"); }
-                // If sigscanning fails, then disable the autosplitter and return.
-                // At this point, the only way to re-enable the autosplitter is to either relaunch LiveSplit, reopen the ASL script or re-launch the game.
-                // throw new Exception();
-                vars.DebugPrint("  => Some addresses were not found. Disabling autosplitting functionality...");
-        
-                MessageBox.Show("This game version is not currently supported by the autosplitter.\n\n" +
-                                "Load time removal and autosplitting functionality will be disabled.",
-                                "LiveSplit - Halo Infinite", MessageBoxButtons.OK, MessageBoxIcon.Information);
-                vars.IsAutosplitterEnabled = false;
                 return;
             }
             vars.DebugPrint("  => All addresses found. No Errors.");
@@ -512,8 +453,11 @@ update
     vars.watchers.UpdateAll(game);
 
     // Update our custom state variables
-    vars.Map.Old = vars.Map.Current; vars.Map.Current = vars.GetCurrentMap();
-    vars.IsLoading.Old = vars.IsLoading.Current; vars.IsLoading.Current = vars.GetLoadState();
+    vars.Map.Old = vars.Map.Current;
+    vars.Map.Current = vars.GetCurrentMap();
+
+    vars.IsLoading.Old = vars.IsLoading.Current;
+    vars.IsLoading.Current = vars.GetLoadState();
 
     // If the timer isn't running (eg. a run reset), reset the splits dictionary
     if (timer.CurrentPhase == TimerPhase.NotRunning && ((Dictionary<string, bool>)(vars.AlreadyTriggeredSplits)).Any(x => x.Value))

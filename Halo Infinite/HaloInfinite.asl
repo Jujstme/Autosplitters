@@ -3,9 +3,10 @@
 // Thanks to all guys who helped in writing this
 // Coding: Jujstme
 // contacts: just.tribe@gmail.com
-// Version: 1.0.9.1 (May 8th, 2022)
+// Version: 1.0.10.0 (May 29th, 2022)
 
 /* Changelog
+    - 1.0.10.0: added support for v6.10022.10499.0
     - 1.0.9.1: Dropped sigscans because they don't work properly across different versions of the game. Rewrote the offsets manually
     - 1.0.9: updated sigscans to work with Season2 patch
     - 1.0.8.6: added support for version v6.10021.12835.0 (new Arbiter.dll patch) (Mar 22nd, 2022)
@@ -161,12 +162,12 @@ init
         { 0x1829000, "v6.10021.12835.0" },
         { 0x1827000, "v6.10021.16272.0" },
         // { 0x17DE000, "v6.10021.18539.0" }, // Season 2, disabled for now
+        { 0x1806000, "v6.10022.10499.0" },
     }.TryGetValue(ArbiterModuleSize, out version))
     {
         vars.DebugPrint("   => Game version is not among the ones hardcoded in the autosplitter.");
-        vars.DebugPrint("   => Switching to sigscanning...");
-
-        //version = "Unknown game version";
+        //vars.DebugPrint("   => Switching to sigscanning...");
+        version = "Unknown game version";
     } else {
         vars.DebugPrint("  => Recognized game version: " + version);
     }
@@ -175,28 +176,8 @@ init
     // We will change it to false if we need to disable the autosplitter for whatever reason.
     vars.IsAutosplitterEnabled = true;
 
-    // Offset dictionaries
-    var LoadStatusVars = new Dictionary<string, Tuple<IntPtr, string>>();
-    IntPtr PlotBoolsOffset = IntPtr.Zero;
-
-    // These offsets should stay constant regardless of the game version... I hope.
-    var PlotBools = new Dictionary<string, int>{
-        { "WarshipGbraakonStartTrigger", 0xB55D0 },
-        { "OutpostTremonius",            0xB5558 },
-        { "FOBGolf",                     0xB746C },
-        { "Tower",                       0xB55B0 },
-        { "TravelToDigSite",             0xB72BC },
-        { "Spire",                       0xB5308 },
-        { "EastAAGun",                   0xB7344 },
-        { "NorthAAGun",                  0xB7354 },
-        { "WestAAGun",                   0xB7364 },
-        { "PelicanSpartanKillers",       0xB7384 },
-        { "SequenceNorthernBeacon",      0xB9370 },
-        { "SequenceSouthernBeacon",      0xB9378 },
-        { "SequenceEasternBeacon",       0xB9380 },
-        { "SequenceSouthwesternBeacon",  0xB9388 },
-        { "SilentAuditorium",            0xB740C }
-    };
+    // Main watchers variable
+    vars.watchers = new MemoryWatcherList();
 
     /* For the autosplitter to work we need 7 variables
      *   - LoadStatus: it's a byte, but treated as a bool in the autosplitter. It fluctuates between 0 and 3, but basically tells the system when we are loading a map in the main menu
@@ -213,84 +194,186 @@ init
     switch (version)
     {
         case "v6.10020.17952.0":
-            PlotBoolsOffset = modules.First().BaseAddress + 0x3E485C8;
-            LoadStatusVars = new Dictionary<string, Tuple<IntPtr, string>>{
-                { "LoadStatus",           new Tuple<IntPtr, string>(modules.First().BaseAddress + 0x433037C, "bool") },
-                { "LoadStatus2",          new Tuple<IntPtr, string>(modules.First().BaseAddress + 0x43265A4, "byte") },
-                { "LoadSplashScreen",     new Tuple<IntPtr, string>(modules.First().BaseAddress + 0x43A9384, "byte") },
-                { "DoNotFreeze",          new Tuple<IntPtr, string>(modules.First().BaseAddress + 0x43A8049, "bool") },
-                { "StatusString",         new Tuple<IntPtr, string>(modules.First().BaseAddress + 0x462F2C0, "string") },
-                { "IsLoadingInCutscene",  new Tuple<IntPtr, string>(modules.First().BaseAddress + 0x3EC2071, "bool") }
-            };
+            vars.watchers.Add(new MemoryWatcher<bool>(new DeepPointer(modules.First().BaseAddress + 0x433037C)) { Name = "LoadStatus" });
+            vars.watchers.Add(new MemoryWatcher<byte>(new DeepPointer(modules.First().BaseAddress + 0x43265A4)) { Name = "LoadStatus2" });
+            vars.watchers.Add(new MemoryWatcher<byte>(new DeepPointer(modules.First().BaseAddress + 0x43A9384)) { Name = "LoadSplashScreen" });
+            vars.watchers.Add(new MemoryWatcher<bool>(new DeepPointer(modules.First().BaseAddress + 0x43A8049)) { Name = "DoNotFreeze" });
+            vars.watchers.Add(new MemoryWatcher<bool>(new DeepPointer(modules.First().BaseAddress + 0x3EC2071)) { Name = "IsLoadingInCutscene" });
+            vars.watchers.Add(new StringWatcher(new DeepPointer(modules.First().BaseAddress + 0x462F2C0), 255) { Name = "StatusString" });
+            vars.watchers.Add(new MemoryWatcher<byte>(new DeepPointer(modules.First().BaseAddress + 0x3E485C8, 0xB55D0)) { Name = "WarshipGbraakonStartTrigger" });
+            vars.watchers.Add(new MemoryWatcher<byte>(new DeepPointer(modules.First().BaseAddress + 0x3E485C8, 0xB5558)) { Name = "OutpostTremonius" });
+            vars.watchers.Add(new MemoryWatcher<byte>(new DeepPointer(modules.First().BaseAddress + 0x3E485C8, 0xB746C)) { Name = "FOBGolf" });
+            vars.watchers.Add(new MemoryWatcher<byte>(new DeepPointer(modules.First().BaseAddress + 0x3E485C8, 0xB55B0)) { Name = "Tower" });
+            vars.watchers.Add(new MemoryWatcher<byte>(new DeepPointer(modules.First().BaseAddress + 0x3E485C8, 0xB72BC)) { Name = "TravelToDigSite" });
+            vars.watchers.Add(new MemoryWatcher<byte>(new DeepPointer(modules.First().BaseAddress + 0x3E485C8, 0xB5308)) { Name = "Spire" });
+            vars.watchers.Add(new MemoryWatcher<byte>(new DeepPointer(modules.First().BaseAddress + 0x3E485C8, 0xB7344)) { Name = "EastAAGun" });
+            vars.watchers.Add(new MemoryWatcher<byte>(new DeepPointer(modules.First().BaseAddress + 0x3E485C8, 0xB7354)) { Name = "NorthAAGun" });
+            vars.watchers.Add(new MemoryWatcher<byte>(new DeepPointer(modules.First().BaseAddress + 0x3E485C8, 0xB7364)) { Name = "WestAAGun" });
+            vars.watchers.Add(new MemoryWatcher<byte>(new DeepPointer(modules.First().BaseAddress + 0x3E485C8, 0xB7384)) { Name = "PelicanSpartanKillers" });
+            vars.watchers.Add(new MemoryWatcher<byte>(new DeepPointer(modules.First().BaseAddress + 0x3E485C8, 0xB9370)) { Name = "SequenceNorthernBeacon" });
+            vars.watchers.Add(new MemoryWatcher<byte>(new DeepPointer(modules.First().BaseAddress + 0x3E485C8, 0xB9370)) { Name = "SequenceSouthernBeacon" });
+            vars.watchers.Add(new MemoryWatcher<byte>(new DeepPointer(modules.First().BaseAddress + 0x3E485C8, 0xB9380)) { Name = "SequenceEasternBeacon" });
+            vars.watchers.Add(new MemoryWatcher<byte>(new DeepPointer(modules.First().BaseAddress + 0x3E485C8, 0xB9380)) { Name = "SequenceSouthwesternBeacon" });
+            vars.watchers.Add(new MemoryWatcher<byte>(new DeepPointer(modules.First().BaseAddress + 0x3E485C8, 0xB740C)) { Name = "SilentAuditorium" });			
         break;
 
         case "v6.10020.19048.0":
-            PlotBoolsOffset = modules.First().BaseAddress + 0x482C908;
-            LoadStatusVars = new Dictionary<string, Tuple<IntPtr, string>>{
-                { "LoadStatus",           new Tuple<IntPtr, string>(modules.First().BaseAddress + 0x5007ADC, "bool") },
-                { "LoadStatus2",          new Tuple<IntPtr, string>(modules.First().BaseAddress + 0x4FFDD04, "byte") },
-                { "LoadSplashScreen",     new Tuple<IntPtr, string>(modules.First().BaseAddress + 0x50A1B0C, "byte") },
-                { "DoNotFreeze",          new Tuple<IntPtr, string>(modules.First().BaseAddress + 0x509E5BC, "bool") },
-                { "StatusString",         new Tuple<IntPtr, string>(modules.First().BaseAddress + 0x4CA11B0, "string") },
-                { "IsLoadingInCutscene",  new Tuple<IntPtr, string>(modules.First().BaseAddress + 0x48A6AB7, "bool") }
-            };
+            vars.watchers.Add(new MemoryWatcher<bool>(new DeepPointer(modules.First().BaseAddress + 0x5007ADC)) { Name = "LoadStatus" });
+            vars.watchers.Add(new MemoryWatcher<byte>(new DeepPointer(modules.First().BaseAddress + 0x4FFDD04)) { Name = "LoadStatus2" });
+            vars.watchers.Add(new MemoryWatcher<byte>(new DeepPointer(modules.First().BaseAddress + 0x50A1B0C)) { Name = "LoadSplashScreen" });
+            vars.watchers.Add(new MemoryWatcher<bool>(new DeepPointer(modules.First().BaseAddress + 0x509E5BC)) { Name = "DoNotFreeze" });
+            vars.watchers.Add(new MemoryWatcher<bool>(new DeepPointer(modules.First().BaseAddress + 0x48A6AB7)) { Name = "IsLoadingInCutscene" });
+            vars.watchers.Add(new StringWatcher(new DeepPointer(modules.First().BaseAddress + 0x4CA11B0), 255) { Name = "StatusString" });
+            vars.watchers.Add(new MemoryWatcher<byte>(new DeepPointer(modules.First().BaseAddress + 0x482C908, 0xB55D0)) { Name = "WarshipGbraakonStartTrigger" });
+            vars.watchers.Add(new MemoryWatcher<byte>(new DeepPointer(modules.First().BaseAddress + 0x482C908, 0xB5558)) { Name = "OutpostTremonius" });
+            vars.watchers.Add(new MemoryWatcher<byte>(new DeepPointer(modules.First().BaseAddress + 0x482C908, 0xB746C)) { Name = "FOBGolf" });
+            vars.watchers.Add(new MemoryWatcher<byte>(new DeepPointer(modules.First().BaseAddress + 0x482C908, 0xB55B0)) { Name = "Tower" });
+            vars.watchers.Add(new MemoryWatcher<byte>(new DeepPointer(modules.First().BaseAddress + 0x482C908, 0xB72BC)) { Name = "TravelToDigSite" });
+            vars.watchers.Add(new MemoryWatcher<byte>(new DeepPointer(modules.First().BaseAddress + 0x482C908, 0xB5308)) { Name = "Spire" });
+            vars.watchers.Add(new MemoryWatcher<byte>(new DeepPointer(modules.First().BaseAddress + 0x482C908, 0xB7344)) { Name = "EastAAGun" });
+            vars.watchers.Add(new MemoryWatcher<byte>(new DeepPointer(modules.First().BaseAddress + 0x482C908, 0xB7354)) { Name = "NorthAAGun" });
+            vars.watchers.Add(new MemoryWatcher<byte>(new DeepPointer(modules.First().BaseAddress + 0x482C908, 0xB7364)) { Name = "WestAAGun" });
+            vars.watchers.Add(new MemoryWatcher<byte>(new DeepPointer(modules.First().BaseAddress + 0x482C908, 0xB7384)) { Name = "PelicanSpartanKillers" });
+            vars.watchers.Add(new MemoryWatcher<byte>(new DeepPointer(modules.First().BaseAddress + 0x482C908, 0xB9370)) { Name = "SequenceNorthernBeacon" });
+            vars.watchers.Add(new MemoryWatcher<byte>(new DeepPointer(modules.First().BaseAddress + 0x482C908, 0xB9370)) { Name = "SequenceSouthernBeacon" });
+            vars.watchers.Add(new MemoryWatcher<byte>(new DeepPointer(modules.First().BaseAddress + 0x482C908, 0xB9380)) { Name = "SequenceEasternBeacon" });
+            vars.watchers.Add(new MemoryWatcher<byte>(new DeepPointer(modules.First().BaseAddress + 0x482C908, 0xB9380)) { Name = "SequenceSouthwesternBeacon" });
+            vars.watchers.Add(new MemoryWatcher<byte>(new DeepPointer(modules.First().BaseAddress + 0x482C908, 0xB740C)) { Name = "SilentAuditorium" });
         break;
 
         case "v6.10021.10921.0":
         case "v6.10021.11755.0":
-            PlotBoolsOffset = modules.First().BaseAddress + 0x3E49588;
-            LoadStatusVars = new Dictionary<string, Tuple<IntPtr, string>>{
-                { "LoadStatus",           new Tuple<IntPtr, string>(modules.First().BaseAddress + 0x433133C, "bool") },
-                { "LoadStatus2",          new Tuple<IntPtr, string>(modules.First().BaseAddress + 0x4327564, "byte") },
-                { "LoadSplashScreen",     new Tuple<IntPtr, string>(modules.First().BaseAddress + 0x43AA344, "byte") },
-                { "DoNotFreeze",          new Tuple<IntPtr, string>(modules.First().BaseAddress + 0x43A9009, "bool") },
-                { "StatusString",         new Tuple<IntPtr, string>(modules.First().BaseAddress + 0x4630240, "string") },
-                { "IsLoadingInCutscene",  new Tuple<IntPtr, string>(modules.First().BaseAddress + 0x3EC3031, "bool") }
-            };
+            vars.watchers.Add(new MemoryWatcher<bool>(new DeepPointer(modules.First().BaseAddress + 0x433133C)) { Name = "LoadStatus" });
+            vars.watchers.Add(new MemoryWatcher<byte>(new DeepPointer(modules.First().BaseAddress + 0x4327564)) { Name = "LoadStatus2" });
+            vars.watchers.Add(new MemoryWatcher<byte>(new DeepPointer(modules.First().BaseAddress + 0x43AA344)) { Name = "LoadSplashScreen" });
+            vars.watchers.Add(new MemoryWatcher<bool>(new DeepPointer(modules.First().BaseAddress + 0x43A9009)) { Name = "DoNotFreeze" });
+            vars.watchers.Add(new MemoryWatcher<bool>(new DeepPointer(modules.First().BaseAddress + 0x3EC3031)) { Name = "IsLoadingInCutscene" });
+            vars.watchers.Add(new StringWatcher(new DeepPointer(modules.First().BaseAddress + 0x4630240), 255) { Name = "StatusString" });
+            vars.watchers.Add(new MemoryWatcher<byte>(new DeepPointer(modules.First().BaseAddress + 0x3E49588, 0xB55D0)) { Name = "WarshipGbraakonStartTrigger" });
+            vars.watchers.Add(new MemoryWatcher<byte>(new DeepPointer(modules.First().BaseAddress + 0x3E49588, 0xB5558)) { Name = "OutpostTremonius" });
+            vars.watchers.Add(new MemoryWatcher<byte>(new DeepPointer(modules.First().BaseAddress + 0x3E49588, 0xB746C)) { Name = "FOBGolf" });
+            vars.watchers.Add(new MemoryWatcher<byte>(new DeepPointer(modules.First().BaseAddress + 0x3E49588, 0xB55B0)) { Name = "Tower" });
+            vars.watchers.Add(new MemoryWatcher<byte>(new DeepPointer(modules.First().BaseAddress + 0x3E49588, 0xB72BC)) { Name = "TravelToDigSite" });
+            vars.watchers.Add(new MemoryWatcher<byte>(new DeepPointer(modules.First().BaseAddress + 0x3E49588, 0xB5308)) { Name = "Spire" });
+            vars.watchers.Add(new MemoryWatcher<byte>(new DeepPointer(modules.First().BaseAddress + 0x3E49588, 0xB7344)) { Name = "EastAAGun" });
+            vars.watchers.Add(new MemoryWatcher<byte>(new DeepPointer(modules.First().BaseAddress + 0x3E49588, 0xB7354)) { Name = "NorthAAGun" });
+            vars.watchers.Add(new MemoryWatcher<byte>(new DeepPointer(modules.First().BaseAddress + 0x3E49588, 0xB7364)) { Name = "WestAAGun" });
+            vars.watchers.Add(new MemoryWatcher<byte>(new DeepPointer(modules.First().BaseAddress + 0x3E49588, 0xB7384)) { Name = "PelicanSpartanKillers" });
+            vars.watchers.Add(new MemoryWatcher<byte>(new DeepPointer(modules.First().BaseAddress + 0x3E49588, 0xB9370)) { Name = "SequenceNorthernBeacon" });
+            vars.watchers.Add(new MemoryWatcher<byte>(new DeepPointer(modules.First().BaseAddress + 0x3E49588, 0xB9370)) { Name = "SequenceSouthernBeacon" });
+            vars.watchers.Add(new MemoryWatcher<byte>(new DeepPointer(modules.First().BaseAddress + 0x3E49588, 0xB9380)) { Name = "SequenceEasternBeacon" });
+            vars.watchers.Add(new MemoryWatcher<byte>(new DeepPointer(modules.First().BaseAddress + 0x3E49588, 0xB9380)) { Name = "SequenceSouthwesternBeacon" });
+            vars.watchers.Add(new MemoryWatcher<byte>(new DeepPointer(modules.First().BaseAddress + 0x3E49588, 0xB740C)) { Name = "SilentAuditorium" });
         break;
         
         case "v6.10021.12835.0":
-            PlotBoolsOffset = modules.First().BaseAddress + 0x4155BC8;
-            LoadStatusVars = new Dictionary<string, Tuple<IntPtr, string>>{
-                { "LoadStatus",           new Tuple<IntPtr, string>(modules.First().BaseAddress + 0x4643A1C, "bool") },
-                { "LoadStatus2",          new Tuple<IntPtr, string>(modules.First().BaseAddress + 0x4639C44, "byte") },
-                { "LoadSplashScreen",     new Tuple<IntPtr, string>(modules.First().BaseAddress + 0x46B1604, "byte") },
-                { "DoNotFreeze",          new Tuple<IntPtr, string>(modules.First().BaseAddress + 0x46B02C1, "bool") },
-                { "StatusString",         new Tuple<IntPtr, string>(modules.First().BaseAddress + 0x492CCA0, "string") },
-                { "IsLoadingInCutscene",  new Tuple<IntPtr, string>(modules.First().BaseAddress + 0x41D5711, "bool") }
-            };
+            vars.watchers.Add(new MemoryWatcher<bool>(new DeepPointer(modules.First().BaseAddress + 0x4643A1C)) { Name = "LoadStatus" });
+            vars.watchers.Add(new MemoryWatcher<byte>(new DeepPointer(modules.First().BaseAddress + 0x4639C44)) { Name = "LoadStatus2" });
+            vars.watchers.Add(new MemoryWatcher<byte>(new DeepPointer(modules.First().BaseAddress + 0x46B1604)) { Name = "LoadSplashScreen" });
+            vars.watchers.Add(new MemoryWatcher<bool>(new DeepPointer(modules.First().BaseAddress + 0x46B02C1)) { Name = "DoNotFreeze" });
+            vars.watchers.Add(new MemoryWatcher<bool>(new DeepPointer(modules.First().BaseAddress + 0x41D5711)) { Name = "IsLoadingInCutscene" });
+            vars.watchers.Add(new StringWatcher(new DeepPointer(modules.First().BaseAddress + 0x492CCA0), 255) { Name = "StatusString" });
+            vars.watchers.Add(new MemoryWatcher<byte>(new DeepPointer(modules.First().BaseAddress + 0x4155BC8, 0xB55D0)) { Name = "WarshipGbraakonStartTrigger" });
+            vars.watchers.Add(new MemoryWatcher<byte>(new DeepPointer(modules.First().BaseAddress + 0x4155BC8, 0xB5558)) { Name = "OutpostTremonius" });
+            vars.watchers.Add(new MemoryWatcher<byte>(new DeepPointer(modules.First().BaseAddress + 0x4155BC8, 0xB746C)) { Name = "FOBGolf" });
+            vars.watchers.Add(new MemoryWatcher<byte>(new DeepPointer(modules.First().BaseAddress + 0x4155BC8, 0xB55B0)) { Name = "Tower" });
+            vars.watchers.Add(new MemoryWatcher<byte>(new DeepPointer(modules.First().BaseAddress + 0x4155BC8, 0xB72BC)) { Name = "TravelToDigSite" });
+            vars.watchers.Add(new MemoryWatcher<byte>(new DeepPointer(modules.First().BaseAddress + 0x4155BC8, 0xB5308)) { Name = "Spire" });
+            vars.watchers.Add(new MemoryWatcher<byte>(new DeepPointer(modules.First().BaseAddress + 0x4155BC8, 0xB7344)) { Name = "EastAAGun" });
+            vars.watchers.Add(new MemoryWatcher<byte>(new DeepPointer(modules.First().BaseAddress + 0x4155BC8, 0xB7354)) { Name = "NorthAAGun" });
+            vars.watchers.Add(new MemoryWatcher<byte>(new DeepPointer(modules.First().BaseAddress + 0x4155BC8, 0xB7364)) { Name = "WestAAGun" });
+            vars.watchers.Add(new MemoryWatcher<byte>(new DeepPointer(modules.First().BaseAddress + 0x4155BC8, 0xB7384)) { Name = "PelicanSpartanKillers" });
+            vars.watchers.Add(new MemoryWatcher<byte>(new DeepPointer(modules.First().BaseAddress + 0x4155BC8, 0xB9370)) { Name = "SequenceNorthernBeacon" });
+            vars.watchers.Add(new MemoryWatcher<byte>(new DeepPointer(modules.First().BaseAddress + 0x4155BC8, 0xB9370)) { Name = "SequenceSouthernBeacon" });
+            vars.watchers.Add(new MemoryWatcher<byte>(new DeepPointer(modules.First().BaseAddress + 0x4155BC8, 0xB9380)) { Name = "SequenceEasternBeacon" });
+            vars.watchers.Add(new MemoryWatcher<byte>(new DeepPointer(modules.First().BaseAddress + 0x4155BC8, 0xB9380)) { Name = "SequenceSouthwesternBeacon" });
+            vars.watchers.Add(new MemoryWatcher<byte>(new DeepPointer(modules.First().BaseAddress + 0x4155BC8, 0xB740C)) { Name = "SilentAuditorium" });
         break;
 
         case "v6.10021.16272.0":
-            PlotBoolsOffset = modules.First().BaseAddress + 0x415AC88;
-            LoadStatusVars = new Dictionary<string, Tuple<IntPtr, string>>{
-                { "LoadStatus",           new Tuple<IntPtr, string>(modules.First().BaseAddress + 0x4648ADC, "bool") },
-                { "LoadStatus2",          new Tuple<IntPtr, string>(modules.First().BaseAddress + 0x463ED04, "byte") },
-                { "LoadSplashScreen",     new Tuple<IntPtr, string>(modules.First().BaseAddress + 0x46B6684, "byte") },
-                { "DoNotFreeze",          new Tuple<IntPtr, string>(modules.First().BaseAddress + 0x46B5341, "bool") },
-                { "StatusString",         new Tuple<IntPtr, string>(modules.First().BaseAddress + 0x4931B60, "string") },
-                { "IsLoadingInCutscene",  new Tuple<IntPtr, string>(modules.First().BaseAddress + 0x41D47B1, "bool") }
-            };
+            vars.watchers.Add(new MemoryWatcher<bool>(new DeepPointer(modules.First().BaseAddress + 0x4648ADC)) { Name = "LoadStatus" });
+            vars.watchers.Add(new MemoryWatcher<byte>(new DeepPointer(modules.First().BaseAddress + 0x463ED04)) { Name = "LoadStatus2" });
+            vars.watchers.Add(new MemoryWatcher<byte>(new DeepPointer(modules.First().BaseAddress + 0x46B6684)) { Name = "LoadSplashScreen" });
+            vars.watchers.Add(new MemoryWatcher<bool>(new DeepPointer(modules.First().BaseAddress + 0x46B5341)) { Name = "DoNotFreeze" });
+            vars.watchers.Add(new MemoryWatcher<bool>(new DeepPointer(modules.First().BaseAddress + 0x41D47B1)) { Name = "IsLoadingInCutscene" });
+            vars.watchers.Add(new StringWatcher(new DeepPointer(modules.First().BaseAddress + 0x4931B60), 255) { Name = "StatusString" });
+            vars.watchers.Add(new MemoryWatcher<byte>(new DeepPointer(modules.First().BaseAddress + 0x415AC88, 0xB55D0)) { Name = "WarshipGbraakonStartTrigger" });
+            vars.watchers.Add(new MemoryWatcher<byte>(new DeepPointer(modules.First().BaseAddress + 0x415AC88, 0xB5558)) { Name = "OutpostTremonius" });
+            vars.watchers.Add(new MemoryWatcher<byte>(new DeepPointer(modules.First().BaseAddress + 0x415AC88, 0xB746C)) { Name = "FOBGolf" });
+            vars.watchers.Add(new MemoryWatcher<byte>(new DeepPointer(modules.First().BaseAddress + 0x415AC88, 0xB55B0)) { Name = "Tower" });
+            vars.watchers.Add(new MemoryWatcher<byte>(new DeepPointer(modules.First().BaseAddress + 0x415AC88, 0xB72BC)) { Name = "TravelToDigSite" });
+            vars.watchers.Add(new MemoryWatcher<byte>(new DeepPointer(modules.First().BaseAddress + 0x415AC88, 0xB5308)) { Name = "Spire" });
+            vars.watchers.Add(new MemoryWatcher<byte>(new DeepPointer(modules.First().BaseAddress + 0x415AC88, 0xB7344)) { Name = "EastAAGun" });
+            vars.watchers.Add(new MemoryWatcher<byte>(new DeepPointer(modules.First().BaseAddress + 0x415AC88, 0xB7354)) { Name = "NorthAAGun" });
+            vars.watchers.Add(new MemoryWatcher<byte>(new DeepPointer(modules.First().BaseAddress + 0x415AC88, 0xB7364)) { Name = "WestAAGun" });
+            vars.watchers.Add(new MemoryWatcher<byte>(new DeepPointer(modules.First().BaseAddress + 0x415AC88, 0xB7384)) { Name = "PelicanSpartanKillers" });
+            vars.watchers.Add(new MemoryWatcher<byte>(new DeepPointer(modules.First().BaseAddress + 0x415AC88, 0xB9370)) { Name = "SequenceNorthernBeacon" });
+            vars.watchers.Add(new MemoryWatcher<byte>(new DeepPointer(modules.First().BaseAddress + 0x415AC88, 0xB9370)) { Name = "SequenceSouthernBeacon" });
+            vars.watchers.Add(new MemoryWatcher<byte>(new DeepPointer(modules.First().BaseAddress + 0x415AC88, 0xB9380)) { Name = "SequenceEasternBeacon" });
+            vars.watchers.Add(new MemoryWatcher<byte>(new DeepPointer(modules.First().BaseAddress + 0x415AC88, 0xB9380)) { Name = "SequenceSouthwesternBeacon" });
+            vars.watchers.Add(new MemoryWatcher<byte>(new DeepPointer(modules.First().BaseAddress + 0x415AC88, 0xB740C)) { Name = "SilentAuditorium" });
         break;
 
         case "v6.10021.18539.0":  // Season 2
-            PlotBoolsOffset = game.MemoryPages().FirstOrDefault(p => (int)p.RegionSize == 0x4B30000).BaseAddress; if (PlotBoolsOffset == IntPtr.Zero) throw new Exception(); PlotBoolsOffset += 0xF0560 + 0x3FE8;
-            LoadStatusVars = new Dictionary<string, Tuple<IntPtr, string>>{
-                { "LoadStatus",           new Tuple<IntPtr, string>(modules.First().BaseAddress + 0x453C1EC, "bool") },
-                { "LoadStatus2",          new Tuple<IntPtr, string>(modules.First().BaseAddress + 0x4531C54, "byte") },
-                { "LoadSplashScreen",     new Tuple<IntPtr, string>(modules.First().BaseAddress + 0x45B88A4, "byte") },
-                { "DoNotFreeze",          new Tuple<IntPtr, string>(modules.First().BaseAddress + 0x45B7559, "bool") },
-                { "StatusString",         new Tuple<IntPtr, string>(modules.First().BaseAddress + 0x487EE00, "string") },
-                { "IsLoadingInCutscene",  new Tuple<IntPtr, string>(modules.First().BaseAddress + 0x40D9E90, "bool") }
-            };
+            vars.watchers.Add(new MemoryWatcher<bool>(new DeepPointer(modules.First().BaseAddress + 0x453C1EC)) { Name = "LoadStatus" });
+            vars.watchers.Add(new MemoryWatcher<byte>(new DeepPointer(modules.First().BaseAddress + 0x4531C54)) { Name = "LoadStatus2" });
+            vars.watchers.Add(new MemoryWatcher<byte>(new DeepPointer(modules.First().BaseAddress + 0x45B88A4)) { Name = "LoadSplashScreen" });
+            vars.watchers.Add(new MemoryWatcher<bool>(new DeepPointer(modules.First().BaseAddress + 0x45B7559)) { Name = "DoNotFreeze" });
+            vars.watchers.Add(new MemoryWatcher<bool>(new DeepPointer(modules.First().BaseAddress + 0x40D9E90)) { Name = "IsLoadingInCutscene" });
+            vars.watchers.Add(new StringWatcher(new DeepPointer(modules.First().BaseAddress + 0x487EE00), 255) { Name = "StatusString" });
+            // Needs good offsets for plot bools
+            vars.watchers.Add(new MemoryWatcher<byte>(new DeepPointer(modules.First().BaseAddress + 0x415AC88, 0xB55D0)) { Name = "WarshipGbraakonStartTrigger" });
+            vars.watchers.Add(new MemoryWatcher<byte>(new DeepPointer(modules.First().BaseAddress + 0x415AC88, 0xB5558)) { Name = "OutpostTremonius" });
+            vars.watchers.Add(new MemoryWatcher<byte>(new DeepPointer(modules.First().BaseAddress + 0x415AC88, 0xB746C)) { Name = "FOBGolf" });
+            vars.watchers.Add(new MemoryWatcher<byte>(new DeepPointer(modules.First().BaseAddress + 0x415AC88, 0xB55B0)) { Name = "Tower" });
+            vars.watchers.Add(new MemoryWatcher<byte>(new DeepPointer(modules.First().BaseAddress + 0x415AC88, 0xB72BC)) { Name = "TravelToDigSite" });
+            vars.watchers.Add(new MemoryWatcher<byte>(new DeepPointer(modules.First().BaseAddress + 0x415AC88, 0xB5308)) { Name = "Spire" });
+            vars.watchers.Add(new MemoryWatcher<byte>(new DeepPointer(modules.First().BaseAddress + 0x415AC88, 0xB7344)) { Name = "EastAAGun" });
+            vars.watchers.Add(new MemoryWatcher<byte>(new DeepPointer(modules.First().BaseAddress + 0x415AC88, 0xB7354)) { Name = "NorthAAGun" });
+            vars.watchers.Add(new MemoryWatcher<byte>(new DeepPointer(modules.First().BaseAddress + 0x415AC88, 0xB7364)) { Name = "WestAAGun" });
+            vars.watchers.Add(new MemoryWatcher<byte>(new DeepPointer(modules.First().BaseAddress + 0x415AC88, 0xB7384)) { Name = "PelicanSpartanKillers" });
+            vars.watchers.Add(new MemoryWatcher<byte>(new DeepPointer(modules.First().BaseAddress + 0x415AC88, 0xB9370)) { Name = "SequenceNorthernBeacon" });
+            vars.watchers.Add(new MemoryWatcher<byte>(new DeepPointer(modules.First().BaseAddress + 0x415AC88, 0xB9370)) { Name = "SequenceSouthernBeacon" });
+            vars.watchers.Add(new MemoryWatcher<byte>(new DeepPointer(modules.First().BaseAddress + 0x415AC88, 0xB9380)) { Name = "SequenceEasternBeacon" });
+            vars.watchers.Add(new MemoryWatcher<byte>(new DeepPointer(modules.First().BaseAddress + 0x415AC88, 0xB9380)) { Name = "SequenceSouthwesternBeacon" });
+            vars.watchers.Add(new MemoryWatcher<byte>(new DeepPointer(modules.First().BaseAddress + 0x415AC88, 0xB740C)) { Name = "SilentAuditorium" });
         break;
 
-        default: /*
-            // If we are dealing with a new or unsupported game version, we have no other choice than trying to use sigscanning.
-            // This portion of the code will then attempt to use sigscanning to recover the memory offsets.
+        case "v6.10022.10499.0":
+            vars.watchers.Add(new MemoryWatcher<bool>(new DeepPointer(modules.First().BaseAddress + 0x49012FC)) { Name = "LoadStatus" });
+            vars.watchers.Add(new MemoryWatcher<byte>(new DeepPointer(modules.First().BaseAddress + 0x48F6D64)) { Name = "LoadStatus2" });
+            vars.watchers.Add(new MemoryWatcher<byte>(new DeepPointer(modules.First().BaseAddress + 0x4971F94)) { Name = "LoadSplashScreen" });
+            vars.watchers.Add(new MemoryWatcher<bool>(new DeepPointer(modules.First().BaseAddress + 0x4970C49)) { Name = "DoNotFreeze" });
+            vars.watchers.Add(new MemoryWatcher<bool>(new DeepPointer(modules.First().BaseAddress + 0x44E5E50)) { Name = "IsLoadingInCutscene" });
+            vars.watchers.Add(new StringWatcher(new DeepPointer(modules.First().BaseAddress + 0x4C75320), 255) { Name = "StatusString" });
+            vars.watchers.Add(new MemoryWatcher<byte>(new DeepPointer(modules.First().BaseAddress + 0x446EDE0, 0xB55D0 + 0x3CF4)) { Name = "WarshipGbraakonStartTrigger" });
+            vars.watchers.Add(new MemoryWatcher<byte>(new DeepPointer(modules.First().BaseAddress + 0x446EDE0, 0xB5558 + 0x3CF4)) { Name = "OutpostTremonius" });
+            vars.watchers.Add(new MemoryWatcher<byte>(new DeepPointer(modules.First().BaseAddress + 0x446EDE0, 0xB746C + 0x3CF4)) { Name = "FOBGolf" });
+            vars.watchers.Add(new MemoryWatcher<byte>(new DeepPointer(modules.First().BaseAddress + 0x446EDE0, 0xB55B0 + 0x3CF4)) { Name = "Tower" });
+            vars.watchers.Add(new MemoryWatcher<byte>(new DeepPointer(modules.First().BaseAddress + 0x446EDE0, 0xB72BC + 0x3CF4)) { Name = "TravelToDigSite" });
+            vars.watchers.Add(new MemoryWatcher<byte>(new DeepPointer(modules.First().BaseAddress + 0x446EDE0, 0xB5308 + 0x3CF4)) { Name = "Spire" });
+            vars.watchers.Add(new MemoryWatcher<byte>(new DeepPointer(modules.First().BaseAddress + 0x446EDE0, 0xB7344 + 0x3CF4)) { Name = "EastAAGun" });
+            vars.watchers.Add(new MemoryWatcher<byte>(new DeepPointer(modules.First().BaseAddress + 0x446EDE0, 0xB7354 + 0x3CF4)) { Name = "NorthAAGun" });
+            vars.watchers.Add(new MemoryWatcher<byte>(new DeepPointer(modules.First().BaseAddress + 0x446EDE0, 0xB7364 + 0x3CF4)) { Name = "WestAAGun" });
+            vars.watchers.Add(new MemoryWatcher<byte>(new DeepPointer(modules.First().BaseAddress + 0x446EDE0, 0xB7384 + 0x3CF4)) { Name = "PelicanSpartanKillers" });
+            vars.watchers.Add(new MemoryWatcher<byte>(new DeepPointer(modules.First().BaseAddress + 0x446EDE0, 0xB9370 + 0x3CF4)) { Name = "SequenceNorthernBeacon" });
+            vars.watchers.Add(new MemoryWatcher<byte>(new DeepPointer(modules.First().BaseAddress + 0x446EDE0, 0xB9370 + 0x3CF4)) { Name = "SequenceSouthernBeacon" });
+            vars.watchers.Add(new MemoryWatcher<byte>(new DeepPointer(modules.First().BaseAddress + 0x446EDE0, 0xB9380 + 0x3CF4)) { Name = "SequenceEasternBeacon" });
+            vars.watchers.Add(new MemoryWatcher<byte>(new DeepPointer(modules.First().BaseAddress + 0x446EDE0, 0xB9380 + 0x3CF4)) { Name = "SequenceSouthwesternBeacon" });
+            vars.watchers.Add(new MemoryWatcher<byte>(new DeepPointer(modules.First().BaseAddress + 0x446EDE0, 0xB740C + 0x3CF4)) { Name = "SilentAuditorium" });
+        break;
 
-            // If the game has been launched from less than 5 seconds, throw an exception and re-execute the script.
-            // This is necessary to give the game enough time to decrypt some of the memory pages needed for sigscanning
+        default:
+            if (true)
+            {     
+                MessageBox.Show("This game version is not currently supported by the autosplitter.\n\n" +
+                                "Load time removal and autosplitting functionality will be disabled.",
+                                "LiveSplit - Halo Infinite", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                vars.IsAutosplitterEnabled = false;
+                return;
+            }
+		
+            // This is used only for debug purposes for finding new offsets in recent patches
             if (game.StartTime > DateTime.Now - TimeSpan.FromSeconds(5d)) throw new Exception("Game launched less than 5 seconds ago. Retrying...");
             vars.DebugPrint("  => Sigscanning - Finding base addresses and offsets...");
 
@@ -324,7 +407,6 @@ init
                     if (ptr != IntPtr.Zero)
                     {
                         vars.DebugPrint("   => Offset found for LoadStatus at: 0x" + ((long)ptr - (long)modules.First().BaseAddress).ToString("X") );
-                        LoadStatusVars["LoadStatus"] = new Tuple<IntPtr, string>(ptr, "bool");
                         FoundVars["LoadStatus"] = true;
                     }
                 }
@@ -338,7 +420,6 @@ init
                     if (ptr != IntPtr.Zero)
                     {
                         vars.DebugPrint("   => Offset found for LoadStatus2 at: 0x" + ((long)ptr - (long)modules.First().BaseAddress).ToString("X") );
-                        LoadStatusVars["LoadStatus2"] = new Tuple<IntPtr, string>(ptr, "byte");
                         FoundVars["LoadStatus2"] = true;
                     }
                 }
@@ -352,7 +433,6 @@ init
                     if (ptr != IntPtr.Zero)
                     {
                         vars.DebugPrint("   => Offset found for LoadSplashScreen at: 0x" + ((long)ptr - (long)modules.First().BaseAddress).ToString("X") );
-                        LoadStatusVars["LoadSplashScreen"] = new Tuple<IntPtr, string>(ptr, "byte");
                         FoundVars["LoadSplashScreen"] = true;
                     }
                 }
@@ -366,7 +446,6 @@ init
                     if (ptr != IntPtr.Zero)
                     {
                         vars.DebugPrint("   => Offset found for DoNotFreeze at: 0x" + ((long)ptr - (long)modules.First().BaseAddress).ToString("X") );
-                        LoadStatusVars["DoNotFreeze"] = new Tuple<IntPtr, string>(ptr, "bool");
                         FoundVars["DoNotFreeze"] = true;
                     }
                 }
@@ -379,7 +458,6 @@ init
                     if (ptr != IntPtr.Zero)
                     {
                         vars.DebugPrint("   => Offset found for StatusString at: 0x" + ((long)ptr - (long)modules.First().BaseAddress).ToString("X") );
-                        LoadStatusVars["StatusString"] = new Tuple<IntPtr, string>(ptr, "string");
                         FoundVars["StatusString"] = true;
                     }
                 }
@@ -395,7 +473,6 @@ init
                     if (ptr != IntPtr.Zero)
                     {
                         vars.DebugPrint("   => Offset found for IsLoadingInCutscene at: 0x" + ((long)ptr - (long)modules.First().BaseAddress).ToString("X") );
-                        LoadStatusVars["IsLoadingInCutscene"] = new Tuple<IntPtr, string>(ptr, "bool");
                         FoundVars["IsLoadingInCutscene"] = true; 
                     }
                 }
@@ -411,31 +488,16 @@ init
                 // At this point, the only way to re-enable the autosplitter is to either relaunch LiveSplit, reopen the ASL script or re-launch the game.
                 // throw new Exception();
                 vars.DebugPrint("  => Some addresses were not found. Disabling autosplitting functionality...");
-                */
+        
                 MessageBox.Show("This game version is not currently supported by the autosplitter.\n\n" +
                                 "Load time removal and autosplitting functionality will be disabled.",
                                 "LiveSplit - Halo Infinite", MessageBoxButtons.OK, MessageBoxIcon.Information);
                 vars.IsAutosplitterEnabled = false;
                 return;
-//            }
+            }
             vars.DebugPrint("  => All addresses found. No Errors.");
         break;
     }
-
-
-    // Finally, once we have all the needed offsets, define our watchers
-    vars.watchers = new MemoryWatcherList();
-    foreach (var entry in LoadStatusVars)
-    {
-        switch (entry.Value.Item2)
-        {
-            case "byte": vars.watchers.Add(new MemoryWatcher<byte>(new DeepPointer(entry.Value.Item1)) { Name = entry.Key }); break;
-            case "string": vars.watchers.Add(new StringWatcher(new DeepPointer(entry.Value.Item1), 255) { Name = entry.Key }); break;
-            case "bool": vars.watchers.Add(new MemoryWatcher<bool>(new DeepPointer(entry.Value.Item1)) { Name = entry.Key }); break;
-        }
-    }
-    foreach (var entry in PlotBools)
-        vars.watchers.Add(new MemoryWatcher<byte>(new DeepPointer(PlotBoolsOffset, entry.Value)) { Name = entry.Key });
 
     vars.DebugPrint("  => Init completed.");
 }

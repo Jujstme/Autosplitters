@@ -34,7 +34,13 @@ startup
 
 
     vars.Levels = new Dictionary<string, string>{
+        // Hubs
         { "mainmenu",   "Level_MainMenu" },
+        { "island",     "Level_KaoIsland_Hub" },
+        { "jungle",     "Level_Jungle_Hub" },
+        { "frozen",     "Level_Frozen_Hub" },
+        { "eternity",   "Level_IsleOfEternity_Hub" },
+        // Gameplay levels
         { "intro",      "Level_Intro_01" },
         { "dojo",       "Level_KaoIsland_01" },
         { "forest",     "Level_KaoIsland_02" },
@@ -105,8 +111,11 @@ update
     vars.watchers.UpdateAll(game);
 
     // Dummy watchers
-    vars.watchers["Level"].Old = vars.watchers["LevelPath"].Old.Split('/')[vars.watchers["LevelPath"].Old.Split('/').Length - 1];
-    vars.watchers["Level"].Current = vars.watchers["LevelPath"].Current.Split('/')[vars.watchers["LevelPath"].Current.Split('/').Length - 1];
+    vars.watchers["Level"].Old = vars.watchers["Level"].Current;
+    // Define a currentLevel and let the watcher update if the value, read from memory, is inside the Dictionary
+    var currentLevel = vars.watchers["LevelPath"].Current.Split('/')[vars.watchers["LevelPath"].Current.Split('/').Length - 1];
+    if (((Dictionary<string, string>)vars.Levels).Any(x => x.Value == currentLevel))
+        vars.watchers["Level"].Current = currentLevel;
 }
 
 isLoading
@@ -121,9 +130,16 @@ start
 
 split
 {
+    // Don't accidentally split if you return to the main menu
+    if (vars.watchers["Level"].Current == vars.Levels["mainmenu"])
+        return false;
+
     foreach (var entry in vars.SplitBools)
     {
-        if (!vars.AlreadySplitted.Contains(entry.Key) && entry.Value())
+        if (vars.AlreadySplitted.Contains(entry.Key))
+            continue;
+        
+        if (entry.Value())
         {
             vars.AlreadySplitted.Add(entry.Key);
             return settings[entry.Key];

@@ -1,4 +1,4 @@
-// Load time remover for Kao The Kangaroo (2022)
+// Autosplitter and load time remover for Kao The Kangaroo (2022)
 // Coding: Jujstme
 // contacts: just.tribe@gmail.com
 // Version: 1.0.0 (May 31st, 2022)

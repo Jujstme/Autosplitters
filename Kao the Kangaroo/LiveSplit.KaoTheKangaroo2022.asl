@@ -12,72 +12,68 @@ startup
     // --> ID, Setting name, parent, enabled
     dynamic[,] Settings =
     {
-        { "autoStart", "Enable auto start", null, true },
-        { "autosplitting", "Autosplitting options", null, true },
-            { "intro", "Intro", "autosplitting", true },
-            { "dojo", "Walt's dojo", "autosplitting", true },
-            { "forest", "Dark forest", "autosplitting", true },
-            { "terror", "Terror's lair", "autosplitting", true },
-            { "caves", "Lava caves", "autosplitting", true },
-            { "durian", "Durian valley", "autosplitting", true },
-            { "river", "River track", "autosplitting", true },
-            { "park", "Monkey park", "autosplitting", true },
-            { "throne", "Jungle throne", "autosplitting", true },
-            { "canyon", "Frosty canyon", "autosplitting", true },
-            { "slopes", "Icy slopes", "autosplitting", true },
-            { "springs", "Hot springs", "autosplitting", true },
-            { "spirits", "Temple of spirits", "autosplitting", true },
-            { "funfair", "Sparkly funfair", "autosplitting", true },
-            { "crystal", "Crystal caverns", "autosplitting", true },
-            { "dad", "Eternal chambers", "autosplitting", true }
+        { "intro",   "Intro",             null, true },
+        { "dojo",    "Walt's Dojo",       null, true },
+        { "forest",  "Dark Forest",       null, true },
+        { "terror",  "Terror's Lair",     null, true },
+        { "caves",   "Lava Caves",        null, true },
+        { "durian",  "Durian Valley",     null, true },
+        { "river",   "River Track",       null, true },
+        { "park",    "Monkey Park",       null, true },
+        { "throne",  "Jungle Throne",     null, true },
+        { "canyon",  "Frosty Canyon",     null, true },
+        { "slopes",  "Icy Slopes",        null, true },
+        { "springs", "Hot Springs",       null, true },
+        { "spirits", "Temple of Spirits", null, true },
+        { "funfair", "Sparkly Funfair",   null, true },
+        { "crystal", "Crystal Caverns",   null, true },
+        { "dad",     "Eternal Chambers",  null, true }
     };
     // Autobuild the settings based on the info provided above
     for (int i = 0; i < Settings.GetLength(0); i++) settings.Add(Settings[i, 0], Settings[i, 3], Settings[i, 1], Settings[i, 2]);
 
 
-    vars.Maps = new Dictionary<string, string>{
-        { "intro", "Level_Intro_01" },
-        { "dojo", "Level_KaoIsland_01" },
-        { "forest", "Level_KaoIsland_02" },
-        { "terror", "Level_KaoIsland_03" },
-        { "caves", "Level_KaoIsland_04" },
-        { "durian", "Level_Jungle_01" },
-        { "river", "Level_Jungle_02" },
-        { "park", "Level_Jungle_03" },
-        { "throne", "Level_Jungle_04" },
-        { "canyon", "Level_Frozen_01" },
-        { "slopes", "Level_Frozen_02" },
-        { "springs", "Level_Frozen_03" },
-        { "spirits", "Level_Frozen_04" },
-        { "funfair", "Level_IsleOfEternity_01" },
-        { "crystal", "Level_IsleOfEternity_03" },
-        { "dad", "Level_IsleOfEternity_04" }
+    vars.Levels = new Dictionary<string, string>{
+        { "mainmenu",   "Level_MainMenu" },
+        { "intro",      "Level_Intro_01" },
+        { "dojo",       "Level_KaoIsland_01" },
+        { "forest",     "Level_KaoIsland_02" },
+        { "terror",     "Level_KaoIsland_03" },
+        { "caves",      "Level_KaoIsland_04" },
+        { "durian",     "Level_Jungle_01" },
+        { "river",      "Level_Jungle_02" },
+        { "park",       "Level_Jungle_03" },
+        { "throne",     "Level_Jungle_04" },
+        { "canyon",     "Level_Frozen_01" },
+        { "slopes",     "Level_Frozen_02" },
+        { "springs",    "Level_Frozen_03" },
+        { "spirits",    "Level_Frozen_04" },
+        { "funfair",    "Level_IsleOfEternity_01" },
+        { "crystal",    "Level_IsleOfEternity_03" },
+        { "dad",        "Level_IsleOfEternity_04" }
     };
 
     // SplitBools: a dictionary of booleans that will tell us if we met the conditions to split at a certain point during the run
     vars.SplitBools = new Dictionary<string, Func<bool>>{
-        { "intro", () => vars.watchers["Level"].Old == vars.Maps["intro"] && vars.watchers["Level"].Changed },
-        { "dojo", () => vars.watchers["Level"].Old == vars.Maps["dojo"] && vars.watchers["Level"].Changed },
-        // { "webskip", () => vars.watchers["Level"].Old == vars.Maps["island"] && vars.watchers["Level"].Changed },
-        { "forest", () => vars.watchers["Level"].Old == vars.Maps["forest"] && vars.watchers["Level"].Changed },
-        { "terror", () => vars.watchers["Level"].Old == vars.Maps["terror"] && vars.watchers["Level"].Changed },
-        { "caves", () => vars.watchers["Level"].Old == vars.Maps["caves"] && vars.watchers["Level"].Changed },
-        { "durian", () => vars.watchers["Level"].Old == vars.Maps["durian"] && vars.watchers["Level"].Changed },
-        { "river", () => vars.watchers["Level"].Old == vars.Maps["river"] && vars.watchers["Level"].Changed },
-        { "park", () => vars.watchers["Level"].Old == vars.Maps["park"] && vars.watchers["Level"].Changed },
-        { "throne", () => vars.watchers["Level"].Old == vars.Maps["throne"] && vars.watchers["Level"].Changed },
-        { "canyon", () => vars.watchers["Level"].Old == vars.Maps["canyon"] && vars.watchers["Level"].Changed },
-        { "slopes", () => vars.watchers["Level"].Old == vars.Maps["slopes"] && vars.watchers["Level"].Changed },
-        { "springs", () => vars.watchers["Level"].Old == vars.Maps["springs"] && vars.watchers["Level"].Changed },
-        { "spirits", () => vars.watchers["Level"].Old == vars.Maps["spirits"] && vars.watchers["Level"].Changed },
-        { "funfair", () => vars.watchers["Level"].Old == vars.Maps["funfair"] && vars.watchers["Level"].Changed },
-        { "crystal", () => vars.watchers["Level"].Old == vars.Maps["crystal"] && vars.watchers["Level"].Changed },
-        { "dad", () => vars.watchers["Level"].Current == vars.Maps["dad"] && !vars.watchers["Level"].Changed && vars.watchers["FBHealth"].Current > 0 && vars.watchers["FBHealth"].Current == 0 }
+        { "intro",      () => vars.watchers["Level"].Old == vars.Levels["intro"]   && vars.watchers["Level"].Old != vars.watchers["Level"].Current },
+        { "dojo",       () => vars.watchers["Level"].Old == vars.Levels["dojo"]    && vars.watchers["Level"].Old != vars.watchers["Level"].Current },
+        { "forest",     () => vars.watchers["Level"].Old == vars.Levels["forest"]  && vars.watchers["Level"].Old != vars.watchers["Level"].Current },
+        { "terror",     () => vars.watchers["Level"].Old == vars.Levels["terror"]  && vars.watchers["Level"].Old != vars.watchers["Level"].Current },
+        { "caves",      () => vars.watchers["Level"].Old == vars.Levels["caves"]   && vars.watchers["Level"].Old != vars.watchers["Level"].Current },
+        { "durian",     () => vars.watchers["Level"].Old == vars.Levels["durian"]  && vars.watchers["Level"].Old != vars.watchers["Level"].Current },
+        { "river",      () => vars.watchers["Level"].Old == vars.Levels["river"]   && vars.watchers["Level"].Old != vars.watchers["Level"].Current },
+        { "park",       () => vars.watchers["Level"].Old == vars.Levels["park"]    && vars.watchers["Level"].Old != vars.watchers["Level"].Current },
+        { "throne",     () => vars.watchers["Level"].Old == vars.Levels["throne"]  && vars.watchers["Level"].Old != vars.watchers["Level"].Current },
+        { "canyon",     () => vars.watchers["Level"].Old == vars.Levels["canyon"]  && vars.watchers["Level"].Old != vars.watchers["Level"].Current },
+        { "slopes",     () => vars.watchers["Level"].Old == vars.Levels["slopes"]  && vars.watchers["Level"].Old != vars.watchers["Level"].Current },
+        { "springs",    () => vars.watchers["Level"].Old == vars.Levels["springs"] && vars.watchers["Level"].Old != vars.watchers["Level"].Current },
+        { "spirits",    () => vars.watchers["Level"].Old == vars.Levels["spirits"] && vars.watchers["Level"].Old != vars.watchers["Level"].Current },
+        { "funfair",    () => vars.watchers["Level"].Old == vars.Levels["funfair"] && vars.watchers["Level"].Old != vars.watchers["Level"].Current },
+        { "crystal",    () => vars.watchers["Level"].Old == vars.Levels["crystal"] && vars.watchers["Level"].Old != vars.watchers["Level"].Current },
+        { "dad",        () => vars.watchers["Level"].Current == vars.Levels["dad"] && vars.watchers["Level"].Old == vars.watchers["Level"].Current && vars.watchers["FBHealth"].Current > 0 && vars.watchers["FBHealth"].Current == 0 }
     };
-    vars.AlreadySplitted = new List<string>();
 
-    var Debug = false;
-    vars.DebugPrint = (Action<string>)((string obj) => { if (Debug) print("[KAO] " + obj); });
+    vars.AlreadySplitted = new List<string>();
 }
 
 init
@@ -88,31 +84,29 @@ init
     var ptr = IntPtr.Zero;
     Action checkptr = () => { if (ptr == IntPtr.Zero) throw new NullReferenceException(); };
 
-    ptr = scanner.Scan(new SigScanTarget(5, "89 43 60 8B 05") { OnFound = (p, s, addr) => addr + 0x4 + p.ReadValue<int>(addr) });
-    checkptr();
-    vars.DebugPrint("  => isLoading: address found at 0x" + ((long)ptr - (long)modules.First().BaseAddress).ToString("X"));
+    ptr = scanner.Scan(new SigScanTarget(5, "89 43 60 8B 05") { OnFound = (p, s, addr) => addr + 0x4 + p.ReadValue<int>(addr) }); checkptr();
     vars.watchers.Add(new MemoryWatcher<bool>(ptr) { Name = "isLoading" });
 
-    ptr = scanner.Scan(new SigScanTarget(10, "80 7C 24 ?? 00 ?? ?? 48 8B 3D ???????? 48") { OnFound = (p, s, addr) => addr + 0x4 + p.ReadValue<int>(addr) });
-    checkptr();
-    vars.DebugPrint("  => GWorld address found at 0x" + ((long)ptr - (long)modules.First().BaseAddress).ToString("X"));
-    vars.watchers.Add(new StringWatcher(new DeepPointer(ptr, 0x180, 0x268, 0x40, 0x8, 0x8, 0x2B), 250) { Name = "Level" });
-    vars.watchers.Add(new MemoryWatcher<int>(new DeepPointer(ptr, 0x180, 0x38, 0x0, 0x30, 0x800, 0x4F8)) { Name = "FBHealth" }); // Thanks Ero for the pointer path
+    ptr = scanner.Scan(new SigScanTarget(10, "80 7C 24 ?? 00 ?? ?? 48 8B 3D ???????? 48") { OnFound = (p, s, addr) => addr + 0x4 + p.ReadValue<int>(addr) }); checkptr();
+    // TIL thanks to Ero about ReadStringType. And also the pointer paths.
+    vars.watchers.Add(new StringWatcher(new DeepPointer(ptr, 0x4A0, 0x0), ReadStringType.UTF16, 255) { Name = "LevelPath" });
+    vars.watchers.Add(new MemoryWatcher<int>(new DeepPointer(ptr, 0x180, 0x38, 0x0, 0x30, 0x800, 0x4F8)) { Name = "FBHealth" });
 
-    ptr = scanner.Scan(new SigScanTarget(2, "2B 1D ???????? 45 33 C0") { OnFound = (p, s, addr) => addr + 0x4 + p.ReadValue<int>(addr) });
-    checkptr();
-    vars.DebugPrint("  => StartTrigger address found at 0x" + ((long)ptr - (long)modules.First().BaseAddress).ToString("X"));
+    ptr = scanner.Scan(new SigScanTarget(2, "2B 1D ???????? 45 33 C0") { OnFound = (p, s, addr) => addr + 0x4 + p.ReadValue<int>(addr) }); checkptr();
     vars.watchers.Add(new MemoryWatcher<byte>(ptr) { Name = "StartTrigger" });
+
+    // Dummy watchers
+    vars.watchers.Add(new StringWatcher(IntPtr.Zero, 1) { Name = "Level", Enabled = false });
 }
 
 update
 {
+    // Updating the main watchers variable
     vars.watchers.UpdateAll(game);
 
-    if (timer.CurrentPhase == TimerPhase.NotRunning && vars.AlreadySplitted.Count > 0)
-    {
-        vars.AlreadySplitted = new List<string>();
-    }
+    // Dummy watchers
+    vars.watchers["Level"].Old = vars.watchers["LevelPath"].Old.Split('/')[vars.watchers["LevelPath"].Old.Split('/').Length - 1];
+    vars.watchers["Level"].Current = vars.watchers["LevelPath"].Current.Split('/')[vars.watchers["LevelPath"].Current.Split('/').Length - 1];
 }
 
 isLoading
@@ -122,7 +116,7 @@ isLoading
 
 start
 {
-    return settings["autoStart"] && vars.watchers["StartTrigger"].Current == vars.watchers["StartTrigger"].Old + 1 && vars.watchers["Level"].Current == vars.Maps["intro"];
+    return vars.watchers["StartTrigger"].Current == vars.watchers["StartTrigger"].Old + 1 && vars.watchers["Level"].Old == vars.Levels["mainmenu"];
 }
 
 split
@@ -135,4 +129,9 @@ split
             return settings[entry.Key];
         }
     }
+}
+
+onReset
+{
+    vars.AlreadySplitted = new List<string>();
 }

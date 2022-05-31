@@ -24,6 +24,9 @@ startup
             { "park", "Monkey park", "autosplitting", true },
             { "throne", "Jungle throne", "autosplitting", true },
             { "canyon", "Frosty canyon", "autosplitting", true },
+            { "slopes", "Icy slopes", "autosplitting", true },
+            { "springs", "Hot springs", "autosplitting", true },
+            { "spirits", "Temple of spirits", "autosplitting", true },
             { "funfair", "Sparkly funfair", "autosplitting", true },
             { "crystal", "Crystal caverns", "autosplitting", true },
             { "dad", "Eternal chambers", "autosplitting", true }

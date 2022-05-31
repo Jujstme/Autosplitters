@@ -2,6 +2,7 @@
 // Coding: Jujstme
 // contacts: just.tribe@gmail.com
 // Version: 1.0.0 (May 31st, 2022)
+// Thanks to Ero for helping me understanding how Unreal Engine works
 
 state("Kao-Win64-Shipping") {}
 
@@ -93,7 +94,7 @@ init
     checkptr();
     vars.DebugPrint("  => GWorld address found at 0x" + ((long)ptr - (long)modules.First().BaseAddress).ToString("X"));
     vars.watchers.Add(new StringWatcher(new DeepPointer(ptr, 0x180, 0x268, 0x40, 0x8, 0x8, 0x2B), 250) { Name = "Level" });
-    vars.watchers.Add(new MemoryWatcher<int>(new DeepPointer(ptr, 0x180, 0x38, 0x0, 0x30, 0x800, 0x4F8)) { Name = "FBHealth" });
+    vars.watchers.Add(new MemoryWatcher<int>(new DeepPointer(ptr, 0x180, 0x38, 0x0, 0x30, 0x800, 0x4F8)) { Name = "FBHealth" }); // Thanks Ero for the pointer path
 
     ptr = scanner.Scan(new SigScanTarget(2, "2B 1D ???????? 45 33 C0") { OnFound = (p, s, addr) => addr + 0x4 + p.ReadValue<int>(addr) });
     checkptr();

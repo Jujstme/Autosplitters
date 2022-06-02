@@ -97,6 +97,7 @@ init
     // TIL thanks to Ero about ReadStringType. And also the pointer paths.
     vars.watchers.Add(new StringWatcher(new DeepPointer(ptr, 0x4A0, 0x0), ReadStringType.UTF16, 255) { Name = "LevelPath" });
     vars.watchers.Add(new MemoryWatcher<int>(new DeepPointer(ptr, 0x180, 0x38, 0x0, 0x30, 0x800, 0x4F8)) { Name = "FBHealth" });
+    vars.watchers.Add(new MemoryWatcher<bool>(new DeepPointer(ptr, 0x180, 0x2A0, 0x140, 0x378, 0x2C0)) { Name = "ContinueMenuItem" });
 
     ptr = scanner.Scan(new SigScanTarget(2, "2B 1D ???????? 45 33 C0") { OnFound = (p, s, addr) => addr + 0x4 + p.ReadValue<int>(addr) }); checkptr();
     vars.watchers.Add(new MemoryWatcher<byte>(ptr) { Name = "StartTrigger" });
@@ -125,7 +126,7 @@ isLoading
 
 start
 {
-    return vars.watchers["StartTrigger"].Current == vars.watchers["StartTrigger"].Old + 1 && vars.watchers["Level"].Old == vars.Levels["mainmenu"];
+    return vars.watchers["StartTrigger"].Current == vars.watchers["StartTrigger"].Old + 1 && vars.watchers["Level"].Old == vars.Levels["mainmenu"] && !vars.watchers["ContinueMenuItem"].Current;
 }
 
 split
@@ -150,4 +151,9 @@ split
 onReset
 {
     vars.AlreadySplitted = new List<string>();
+}
+
+reset
+{
+    return vars.watchers["StartTrigger"].Current == vars.watchers["StartTrigger"].Old + 1 && vars.watchers["Level"].Old == vars.Levels["mainmenu"] && !vars.watchers["ContinueMenuItem"].Current;
 }

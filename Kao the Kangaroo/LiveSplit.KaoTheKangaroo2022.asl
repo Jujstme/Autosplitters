@@ -76,7 +76,7 @@ startup
         { "spirits",    () => vars.watchers["Level"].Old == vars.Levels["spirits"] && vars.watchers["Level"].Old != vars.watchers["Level"].Current },
         { "funfair",    () => vars.watchers["Level"].Old == vars.Levels["funfair"] && vars.watchers["Level"].Old != vars.watchers["Level"].Current },
         { "crystal",    () => vars.watchers["Level"].Old == vars.Levels["crystal"] && vars.watchers["Level"].Old != vars.watchers["Level"].Current },
-        { "dad",        () => vars.watchers["Level"].Current == vars.Levels["dad"] && vars.watchers["Level"].Old == vars.watchers["Level"].Current && vars.watchers["FBHealth"].Current > 0 && vars.watchers["FBHealth"].Current == 0 }
+        { "dad",        () => vars.watchers["Level"].Current == vars.Levels["dad"] && vars.watchers["Level"].Old == vars.watchers["Level"].Current && vars.watchers["FBHealth"].Old > 0 && vars.watchers["FBHealth"].Current == 0 }
     };
 
     vars.AlreadySplitted = new List<string>();

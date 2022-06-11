@@ -157,3 +157,8 @@ reset
 {
     return vars.watchers["StartTrigger"].Current == vars.watchers["StartTrigger"].Old + 1 && vars.watchers["Level"].Old == vars.Levels["mainmenu"] && !vars.watchers["ContinueMenuItem"].Current;
 }
+
+exit
+{
+    timer.IsGameTimePaused = true;
+}

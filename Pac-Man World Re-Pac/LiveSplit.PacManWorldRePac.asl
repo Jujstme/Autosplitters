@@ -15,10 +15,14 @@ init
 {
 	vars.Unity.TryOnLoad = (Func<dynamic, bool>)(helper =>
 	{
-		var gsm = helper.GetClass("Assembly-CSharp", "GameStateManager");
-		var gsmSt = helper.GetParent(gsm); // get StageLoader's Singleton
+		var sm = helper.GetClass("Assembly-CSharp", "SceneManager");
+		var smSt = helper.GetParent(sm);
+		vars.Unity.Make<bool>(smSt.Static, smSt["s_sInstance"], sm["m_bProcessing"]).Name = "isLoading";
 
-		vars.Unity.Make<long>(gsmSt.Static, gsmSt["s_sInstance"], gsm["loadScr"]).Name = "isLoading";
+		var gsm = helper.GetClass("Assembly-CSharp", "GameStateManager");
+		var gsmSt = helper.GetParent(gsm);
+		vars.Unity.Make<long>(gsmSt.Static, gsmSt["s_sInstance"], gsm["loadScr"]).Name = "isLoading2";
+
 		return true;
 	});
 
@@ -35,7 +39,7 @@ update
 
 isLoading
 {
-	return vars.Unity["isLoading"].Current != 0;
+	return vars.Unity["isLoading"].Current || vars.Unity["isLoading2"].Current != 0;
 }
 
 exit

@@ -1,14 +1,16 @@
 // Autosplitter and load Time remover for Pac-Man World Re-Pac
 // Coding: Jujstme
 // contacts: just.tribe@gmail.com
-// Version: 1.0.1 (Aug 27th, 2022)
+// Version: 1.0.2 (Aug 27th, 2022)
 
 state("PAC-MAN WORLD Re-PAC") {}
 
 startup
 {
-    vars.Unity = Assembly.Load(File.ReadAllBytes(@"Components\UnityASL.bin")).CreateInstance("UnityASL.Unity");
+    vars.Unity = Activator.CreateInstance(Assembly.Load(File.ReadAllBytes(@"Components\LiveSplit.ASLHelper.bin")).GetType("ASLHelper.Unity"), timer, this);
     vars.Unity.LoadSceneManager = true;
+    vars.Unity.GameName = "Pac-Man World Re-Pac";
+    vars.Unity.AlertLoadless(vars.Unity.GameName);
 
     dynamic[,] Settings =
     {
@@ -41,34 +43,23 @@ startup
 
 init
 {
-    vars.Unity.TryOnLoad = (Func<dynamic, bool>)(helper =>
+    vars.Unity.TryOnLoad = (Func<dynamic, bool>)(mono =>
     {
-        var sm = helper.GetClass("Assembly-CSharp", "SceneManager");
-        var smSt = helper.GetParent(sm);
-        vars.Unity.Make<bool>(smSt.Static, smSt["s_sInstance"], sm["m_bProcessing"]).Name = "isLoading";
-        vars.Unity.Make<int>(smSt.Static, smSt["s_sInstance"], sm["m_eCurrentScene"]).Name = "LevelID";
-        vars.Unity.Make<int>(smSt.Static, smSt["s_sInstance"], sm["m_ePrevScene"]).Name = "OldLevelID";
-
-        var gsm = helper.GetClass("Assembly-CSharp", "GameStateManager");
-        var gsmSt = helper.GetParent(gsm);
-        vars.Unity.Make<long>(gsmSt.Static, gsmSt["s_sInstance"], gsm["loadScr"]).Name = "isLoading2";
-
-        var tocman = helper.GetClass("Assembly-CSharp", "BossTocman");
-        var tocmanSt = helper.GetParent(tocman);
-        vars.Unity.Make<bool>(tocmanSt.Static, tocmanSt["s_sInstance"], tocman["m_qteSuccess"]).Name = "TocmanQTE";
-
+        var sm = mono.GetClass("SceneManager", 1);
+        vars.Unity["isLoading"] = sm.Make<bool>("s_sInstance", "m_bProcessing");
+        vars.Unity["LevelID"] = sm.Make<int>("s_sInstance", "m_eCurrentScene");
+        vars.Unity["OldLevelID"] = sm.Make<int>("s_sInstance", "m_ePrevScene");
+        vars.Unity["isLoading2"] = mono.GetClass("GameStateManager", 1).Make<long>("s_sInstance", "loadScr");
+        vars.Unity["TocmanQTE"] = mono.GetClass("BossTocman", 1).Make<bool>("s_sInstance", "m_qteSuccess");
         return true;
     });
 
-    vars.Unity.Load(game);
+    vars.Unity.Load();
 }
 
 update
 {
-    if (!vars.Unity.Loaded)
-        return false;
-
-    vars.Unity.Update();
+    if (!vars.Unity.Loaded || !vars.Unity.Update()) return false;
 }
 
 split
@@ -104,10 +95,10 @@ onStart
 
 exit
 {
-    vars.Unity.Reset();
+    vars.Unity.Dispose();
 }
 
 shutdown
 {
-    vars.Unity.Reset();
+    vars.Unity.Dispose();
 }

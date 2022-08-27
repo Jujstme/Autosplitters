@@ -31,8 +31,6 @@ update
 		return false;
 
 	vars.Unity.Update();
-
-	print(vars.Unity["isLoading"].Current.ToString());
 }
 
 isLoading

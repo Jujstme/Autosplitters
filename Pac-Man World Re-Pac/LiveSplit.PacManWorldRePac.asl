@@ -67,7 +67,7 @@ split
     if (vars.Unity["LevelID"].Changed && (vars.Unity["OldLevelID"].Current == 3 || vars.Unity["OldLevelID"].Current > 2000) && vars.Unity["OldLevelID"].Old > 100 && vars.Unity["OldLevelID"].Old < 604)
     {
         return settings[vars.Unity["OldLevelID"].Old.ToString()];
-    } else if (vars.Unity["OldLevelID"].Current == 604 && !vars.Unity["OldLevelID"].Changed)
+    } else if (vars.Unity["LevelID"].Current == 604 && !vars.Unity["LevelID"].Changed)
     {
         return settings[vars.Unity["OldLevelID"].Old.ToString()] && vars.Unity["TocmanQTE"].Current && !vars.Unity["TocmanQTE"].Old;
     }

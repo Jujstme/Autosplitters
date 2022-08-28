@@ -70,7 +70,7 @@ split
     }
     else if (vars.Unity["LevelID"].Current == 604 && !vars.Unity["LevelID"].Changed)
     {
-        return settings[vars.Unity["OldLevelID"].Old.ToString()] && vars.Unity["TocmanQTE"].Current && !vars.Unity["TocmanQTE"].Old;
+        return settings[vars.Unity["LevelID"].Old.ToString()] && vars.Unity["TocmanQTE"].Current && !vars.Unity["TocmanQTE"].Old;
     }
 }
 

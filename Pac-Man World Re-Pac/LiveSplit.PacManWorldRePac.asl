@@ -1,7 +1,7 @@
 // Autosplitter and load Time remover for Pac-Man World Re-Pac
 // Coding: Jujstme
 // contacts: just.tribe@gmail.com
-// Version: 1.0.2 (Aug 27th, 2022)
+// Version: 1.0.4 (Sep 4th, 2022)
 
 state("PAC-MAN WORLD Re-PAC") {}
 
@@ -17,7 +17,7 @@ startup
         { 101, "Buccaneer Beach" },
         { 102, "Corsair's Cove" },
         { 103, "Crazy Cannonade" },
-        { 104, "HMB Windbag" },
+        { 104, "HMS Windbag" },
         { 201, "Crisis Cavern" },
         { 202, "Manic Mines" },
         { 203, "Anubis Rex" },
@@ -48,25 +48,30 @@ init
         var sm = mono.GetClass("SceneManager", 1);
         vars.Unity["isLoading"] = sm.Make<bool>("s_sInstance", "m_bProcessing");
         vars.Unity["LevelID"] = sm.Make<int>("s_sInstance", "m_eCurrentScene");
-        vars.Unity["OldLevelID"] = sm.Make<int>("s_sInstance", "m_ePrevScene");
         vars.Unity["isLoading2"] = mono.GetClass("GameStateManager", 1).Make<long>("s_sInstance", "loadScr");
         vars.Unity["TocmanQTE"] = mono.GetClass("BossTocman", 1).Make<bool>("s_sInstance", "m_qteSuccess");
         return true;
     });
 
     vars.Unity.Load();
+
+    vars.LastLevelID = 0;
 }
 
 update
 {
-    if (!vars.Unity.Loaded || !vars.Unity.Update()) return false;
+    if (!vars.Unity.Loaded || !vars.Unity.Update())
+        return false;
+
+    if (vars.Unity["LevelID"].Current > 100 && vars.Unity["LevelID"].Current <= 604)
+        vars.LastLevelID = vars.Unity["LevelID"].Current;
 }
 
 split
 {
-    if (vars.Unity["LevelID"].Changed && vars.Unity["LevelID"].Current == 1 && (vars.Unity["OldLevelID"].Current == 3 || vars.Unity["OldLevelID"].Current > 2000) && vars.Unity["OldLevelID"].Old > 100 && vars.Unity["OldLevelID"].Old < 604)
+    if (vars.Unity["LevelID"].Changed && vars.Unity["LevelID"].Current == 1 && (vars.Unity["LevelID"].Old == 3 || vars.Unity["LevelID"].Old > 1000))
     {
-        return settings[vars.Unity["OldLevelID"].Old.ToString()];
+        return settings[vars.LastLevelID.ToString()];
     }
     else if (vars.Unity["LevelID"].Current == 604 && !vars.Unity["LevelID"].Changed)
     {
@@ -81,7 +86,7 @@ start
 
 reset
 {
-    return vars.Unity["LevelID"].Current == 4 && vars.Unity["LevelID"].Changed;
+    return vars.Unity["LevelID"].Current == 4 && vars.Unity["LevelID"].Old == 1;
 }
 
 isLoading

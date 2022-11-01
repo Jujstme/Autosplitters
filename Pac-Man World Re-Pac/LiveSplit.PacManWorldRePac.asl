@@ -1,16 +1,16 @@
 // Autosplitter and load Time remover for Pac-Man World Re-Pac
 // Coding: Jujstme
 // contacts: just.tribe@gmail.com
-// Version: 1.0.4 (Sep 4th, 2022)
+// Version: 1.0.5 (Nov 1st, 2022)
 
 state("PAC-MAN WORLD Re-PAC") {}
 
 startup
 {
-    vars.Unity = Activator.CreateInstance(Assembly.Load(File.ReadAllBytes(@"Components\LiveSplit.ASLHelper.bin")).GetType("ASLHelper.Unity"), timer, this);
-    vars.Unity.LoadSceneManager = true;
-    vars.Unity.GameName = "Pac-Man World Re-Pac";
-    vars.Unity.AlertLoadless(vars.Unity.GameName);
+    Assembly.Load(File.ReadAllBytes("Components/asl-help")).CreateInstance("Unity");
+    //vars.Helper.LoadSceneManager = true;
+    vars.Helper.GameName = "Pac-Man World Re-Pac";
+    vars.Helper.AlertLoadless();
 
     dynamic[,] Settings =
     {
@@ -43,55 +43,51 @@ startup
 
 init
 {
-    vars.Unity.TryOnLoad = (Func<dynamic, bool>)(mono =>
+    vars.Helper.TryLoad = (Func<dynamic, bool>)(mono =>
     {
         var sm = mono.GetClass("SceneManager", 1);
-        vars.Unity["isLoading"] = sm.Make<bool>("s_sInstance", "m_bProcessing");
-        vars.Unity["LevelID"] = sm.Make<int>("s_sInstance", "m_eCurrentScene");
-        vars.Unity["isLoading2"] = mono.GetClass("GameStateManager", 1).Make<long>("s_sInstance", "loadScr");
-        vars.Unity["TocmanQTE"] = mono.GetClass("BossTocman", 1).Make<bool>("s_sInstance", "m_qteSuccess");
+        vars.Helper["isLoading"] = sm.Make<bool>("s_sInstance", "m_bProcessing");
+        vars.Helper["isLoading"] = sm.Make<bool>("s_sInstance", "m_bProcessing");
+        vars.Helper["LevelID"] = sm.Make<int>("s_sInstance", "m_eCurrentScene");
+        vars.Helper["isLoading2"] = mono.GetClass("GameStateManager", 1).Make<long>("s_sInstance", "loadScr");
+        vars.Helper["TocmanQTE"] = mono.GetClass("BossTocman", 1).Make<bool>("s_sInstance", "m_qteSuccess");
         return true;
     });
-
-    vars.Unity.Load();
 
     vars.LastLevelID = 0;
 }
 
 update
 {
-    if (!vars.Unity.Loaded || !vars.Unity.Update())
-        return false;
-
-    if (vars.Unity["LevelID"].Current > 100 && vars.Unity["LevelID"].Current <= 604)
-        vars.LastLevelID = vars.Unity["LevelID"].Current;
+    if (vars.Helper["LevelID"].Current > 100 && vars.Helper["LevelID"].Current <= 604)
+        vars.LastLevelID = vars.Helper["LevelID"].Current;
 }
 
 split
 {
-    if (vars.Unity["LevelID"].Changed && vars.Unity["LevelID"].Current == 1 && (vars.Unity["LevelID"].Old == 3 || vars.Unity["LevelID"].Old > 1000))
+    if (vars.Helper["LevelID"].Changed && vars.Helper["LevelID"].Current == 1 && (vars.Helper["LevelID"].Old == 3 || vars.Helper["LevelID"].Old > 1000))
     {
         return settings[vars.LastLevelID.ToString()];
     }
-    else if (vars.Unity["LevelID"].Current == 604 && !vars.Unity["LevelID"].Changed)
+    else if (vars.Helper["LevelID"].Current == 604 && !vars.Helper["LevelID"].Changed)
     {
-        return settings[vars.Unity["LevelID"].Old.ToString()] && vars.Unity["TocmanQTE"].Current && !vars.Unity["TocmanQTE"].Old;
+        return settings[vars.Helper["LevelID"].Old.ToString()] && vars.Helper["TocmanQTE"].Current && !vars.Helper["TocmanQTE"].Old;
     }
 }
 
 start
 {
-    return vars.Unity["LevelID"].Current == 4 && vars.Unity["isLoading"].Current && !vars.Unity["isLoading"].Old;
+    return vars.Helper["LevelID"].Current == 4 && vars.Helper["isLoading"].Current && !vars.Helper["isLoading"].Old;
 }
 
 reset
 {
-    return vars.Unity["LevelID"].Current == 4 && vars.Unity["LevelID"].Old == 1;
+    return vars.Helper["LevelID"].Current == 4 && vars.Helper["LevelID"].Old == 1;
 }
 
 isLoading
 {
-    return vars.Unity["isLoading"].Current || vars.Unity["isLoading2"].Current != 0;
+    return vars.Helper["isLoading"].Current || vars.Helper["isLoading2"].Current != 0;
 }
 
 onStart
@@ -99,12 +95,7 @@ onStart
     timer.IsGameTimePaused = true;
 }
 
-exit
-{
-    vars.Unity.Dispose();
-}
-
 shutdown
 {
-    vars.Unity.Dispose();
+    vars.Helper.Dispose();
 }

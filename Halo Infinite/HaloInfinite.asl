@@ -3,9 +3,10 @@
 // Thanks to all guys who helped in writing this
 // Coding: Jujstme
 // contacts: just.tribe@gmail.com
-// Version: 1.1.0.0 (May 29th, 2022)
+// Version: 1.1.0.1 (Dec 16th, 2022)
 
 /* Changelog
+    - 1.1.0.1: added load remover support for v6.10023.16112.0
     - 1.1.0.0: completed adding support for all currently released versions of the game
     - 1.0.10.0: added support for v6.10022.10499.0
     - 1.0.9.1: Dropped sigscans because they don't work properly across different versions of the game. Rewrote the offsets manually
@@ -163,6 +164,7 @@ init
         { 0x1827000, "v6.10021.16272.0" },
         { 0x17DE000, "v6.10021.18539.0" }, // Season 2
         { 0x1806000, "v6.10022.10499.0" },
+        { 0x1679000, "v6.10023.16112.0" },
     }.TryGetValue(ArbiterModuleSize, out version))
     {
         vars.DebugPrint("   => Game version is not among the ones hardcoded in the autosplitter.");
@@ -361,6 +363,30 @@ init
             vars.watchers.Add(new MemoryWatcher<byte>(new DeepPointer(modules.First().BaseAddress + 0x446EDE0, 0xBD074)) { Name = "SequenceEasternBeacon" });
             vars.watchers.Add(new MemoryWatcher<byte>(new DeepPointer(modules.First().BaseAddress + 0x446EDE0, 0xBD07C)) { Name = "SequenceSouthwesternBeacon" });
             vars.watchers.Add(new MemoryWatcher<byte>(new DeepPointer(modules.First().BaseAddress + 0x446EDE0, 0xBB100)) { Name = "SilentAuditorium" });
+        break;
+
+        case "v6.10023.16112.0":
+            vars.watchers.Add(new MemoryWatcher<bool>(new DeepPointer(modules.First().BaseAddress + 0x481B7FC)) { Name = "LoadStatus" });
+            vars.watchers.Add(new MemoryWatcher<byte>(new DeepPointer(modules.First().BaseAddress + 0x4810EE4)) { Name = "LoadStatus2" });
+            vars.watchers.Add(new MemoryWatcher<byte>(new DeepPointer(modules.First().BaseAddress + 0x4898804)) { Name = "LoadSplashScreen" });
+            vars.watchers.Add(new MemoryWatcher<bool>(new DeepPointer(modules.First().BaseAddress + 0x48974A9)) { Name = "DoNotFreeze" });
+            vars.watchers.Add(new MemoryWatcher<bool>(new DeepPointer(modules.First().BaseAddress + 0x4384D10)) { Name = "IsLoadingInCutscene" });
+            vars.watchers.Add(new StringWatcher(new DeepPointer(modules.First().BaseAddress + 0x4B20840), 255) { Name = "StatusString" });
+            vars.watchers.Add(new MemoryWatcher<byte>(new DeepPointer(modules.First().BaseAddress + 0, 0xB92C4)) { Name = "WarshipGbraakonStartTrigger" });
+            vars.watchers.Add(new MemoryWatcher<byte>(new DeepPointer(modules.First().BaseAddress + 0, 0xB924C)) { Name = "OutpostTremonius" });
+            vars.watchers.Add(new MemoryWatcher<byte>(new DeepPointer(modules.First().BaseAddress + 0, 0xBB160)) { Name = "FOBGolf" });
+            vars.watchers.Add(new MemoryWatcher<byte>(new DeepPointer(modules.First().BaseAddress + 0, 0xB92A4)) { Name = "Tower" });
+            vars.watchers.Add(new MemoryWatcher<byte>(new DeepPointer(modules.First().BaseAddress + 0, 0xBAFB0)) { Name = "TravelToDigSite" });
+            vars.watchers.Add(new MemoryWatcher<byte>(new DeepPointer(modules.First().BaseAddress + 0, 0xB8FFC)) { Name = "Spire" });
+            vars.watchers.Add(new MemoryWatcher<byte>(new DeepPointer(modules.First().BaseAddress + 0, 0xBB038)) { Name = "EastAAGun" });
+            vars.watchers.Add(new MemoryWatcher<byte>(new DeepPointer(modules.First().BaseAddress + 0, 0xBB048)) { Name = "NorthAAGun" });
+            vars.watchers.Add(new MemoryWatcher<byte>(new DeepPointer(modules.First().BaseAddress + 0, 0xBB058)) { Name = "WestAAGun" });
+            vars.watchers.Add(new MemoryWatcher<byte>(new DeepPointer(modules.First().BaseAddress + 0, 0xBB078)) { Name = "PelicanSpartanKillers" });
+            vars.watchers.Add(new MemoryWatcher<byte>(new DeepPointer(modules.First().BaseAddress + 0, 0xBD064)) { Name = "SequenceNorthernBeacon" });
+            vars.watchers.Add(new MemoryWatcher<byte>(new DeepPointer(modules.First().BaseAddress + 0, 0xBD06C)) { Name = "SequenceSouthernBeacon" });
+            vars.watchers.Add(new MemoryWatcher<byte>(new DeepPointer(modules.First().BaseAddress + 0, 0xBD074)) { Name = "SequenceEasternBeacon" });
+            vars.watchers.Add(new MemoryWatcher<byte>(new DeepPointer(modules.First().BaseAddress + 0, 0xBD07C)) { Name = "SequenceSouthwesternBeacon" });
+            vars.watchers.Add(new MemoryWatcher<byte>(new DeepPointer(modules.First().BaseAddress + 0, 0xBB100)) { Name = "SilentAuditorium" });
         break;
 
         default:

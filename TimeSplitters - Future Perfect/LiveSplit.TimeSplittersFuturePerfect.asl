@@ -6,12 +6,11 @@ state("Dolphin") {}
 
 init
 {
-    // Default state for the Init Task
+    // Default values
+    refreshRate = 60;
+    current.IGT = TimeSpan.Zero;
     vars.InitCompleted = false;
 
-    // Default values
-    current.IGT = TimeSpan.Zero;
-    refreshRate = 60;
 
     // This function runs a Task that asynchronously looks for the memory
     // addresses needed by the game in the emulated memory in Dolphin.
@@ -22,6 +21,10 @@ init
         // First, set the InitCompleted status to false.
         // It's probably redundant, but it's important this variable stays set to false until the Task is completed
         vars.InitCompleted = false;
+
+        // Game codes
+        var Gamecodes = new List<string>{ "G3FD69", "G3FE69", "G3FF69", "G3FP69", "G3FS69" };
+        vars.CheckGameCode = (Func<bool>)(() => Gamecodes.Contains(vars.watchers["Gamecode"].Current));
 
         // Base address for MEM1
         IntPtr MEM1 = IntPtr.Zero;
@@ -49,7 +52,7 @@ init
                 // KeepAlive is just part of a very basic check. Since the first bytes of MEM1 is always part of the internal game code, it will always be true.
                 // It only returns false if the ReadAction fails, signalling the memory page is no longer valid.
                 new MemoryWatcher<bool>(MEM1) { Name = "KeepAlive", FailAction = MemoryWatcher.ReadFailAction.SetZeroOrNull },
-
+                new StringWatcher(MEM1, 6) { Name = "Gamecode" },
                 new MemoryWatcher<byte>(MEM1 + 0x6109C3) { Name = "FrameRate" },
                 new MemoryWatcher<int>(MEM1 + 0x611908) { Name = "IGT" },
                 new MemoryWatcher<byte>(MEM1 + 0x611937) { Name = "Status" },
@@ -99,12 +102,14 @@ update
         return false;
     }
 
+    // If the game code is incorrect (eg. running another game inside Dolphin) the autosplitter needs to be disabled
+    if (!vars.CheckGameCode())
+        return false;
+
     // From now on, we want the "proper" update block
 
-    // Calculate the IGT based on 
-    current.IGT = vars.watchers["Status"].Current > 7 || vars.watchers["Status"].Current == 2
-        ? old.IGT
-        : TimeSpan.FromSeconds(Math.Truncate((vars.IntToLittleEndian(vars.watchers["IGT"].Current) / (double)vars.watchers["FrameRate"].Current) * 10) / 10);
+    // Calculate the IGT based on the game's internal frame counter
+    current.IGT = vars.watchers["Status"].Current > 7 || vars.watchers["Status"].Current == 2 ? old.IGT : TimeSpan.FromSeconds(Math.Truncate((vars.IntToLittleEndian(vars.watchers["IGT"].Current) / (double)vars.watchers["FrameRate"].Current) * 10) / 10);
 
     if (timer.CurrentPhase == TimerPhase.NotRunning)
         vars.AccumulatedIGT = TimeSpan.Zero;

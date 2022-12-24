@@ -6,12 +6,12 @@ state("Dolphin") {}
 
 init
 {
-    // Default values
-    current.IGT = TimeSpan.Zero;
-    current.rawIGT = TimeSpan.Zero;
-
     // Default state for the Init Task
     vars.InitCompleted = false;
+
+    // Default values
+    current.IGT = TimeSpan.Zero;
+    refreshRate = 60;
 
     // This function runs a Task that asynchronously looks for the memory
     // addresses needed by the game in the emulated memory in Dolphin.
@@ -50,7 +50,9 @@ init
                 // It only returns false if the ReadAction fails, signalling the memory page is no longer valid.
                 new MemoryWatcher<bool>(MEM1) { Name = "KeepAlive", FailAction = MemoryWatcher.ReadFailAction.SetZeroOrNull },
 
-                new MemoryWatcher<float>(MEM1 + 0x570A08) { Name = "IGT" },
+                new MemoryWatcher<byte>(MEM1 + 0x6109C3) { Name = "FrameRate" },
+                new MemoryWatcher<int>(MEM1 + 0x611908) { Name = "IGT" },
+                new MemoryWatcher<byte>(MEM1 + 0x611937) { Name = "Status" },
             };
 
             vars.DebugPrint("    => Done");
@@ -63,32 +65,34 @@ init
 
 startup
 {
-    vars.CancelSource = new CancellationTokenSource();
-
     // Debug functions
     var debug = true; // Easy flag to quickly enable and disable debug outputs. When they're not needed anymore all it takes is to set this to false.
     vars.DebugPrint = (Action<string>)((string obj) => { if (debug) print("[TimeSplitters] " + obj); });
 
     // Default values
-    vars.BufferIGT = TimeSpan.Zero;
     vars.AccumulatedIGT = TimeSpan.Zero;
 
     // Custom func
-    vars.FloatToLittleEndian = (Func<float, float>)(input => {
+    vars.IntToLittleEndian = (Func<int, int>)(input => {
         byte[] temp = BitConverter.GetBytes(input);
         Array.Reverse(temp);
-        return BitConverter.ToSingle(temp, 0);
+        return BitConverter.ToInt32(temp, 0);
     });
+
+    // CancellationTokenSource - used in the Init Task
+    vars.CancelSource = new CancellationTokenSource();
 }
 
 update
 {
     // If the Init Task has not completed, this prevents the autosplitter from proceeding further
-    if (!vars.InitCompleted) return false;
+    if (!vars.InitCompleted)
+        return false;
 
+    // Update the watchers
     vars.watchers.UpdateAll(game);
 
-    // If KeepAlive returna false (see above) we want to re-run the Init Task and look for the memory addresses again
+    // If KeepAlive returns false (see above in the init block) we want to re-run the Init Task and look for the memory addresses again
     if (!vars.watchers["KeepAlive"].Current)
     {
         vars.InitTask();
@@ -96,22 +100,17 @@ update
     }
 
     // From now on, we want the "proper" update block
-    current.rawIGT = TimeSpan.FromSeconds(vars.FloatToLittleEndian(vars.watchers["IGT"].Current));
-    current.IGT = current.rawIGT - vars.BufferIGT;
+
+    // Calculate the IGT based on 
+    current.IGT = vars.watchers["Status"].Current > 7 || vars.watchers["Status"].Current == 2
+        ? old.rawIGT
+        : TimeSpan.FromSeconds(Math.Truncate((vars.IntToLittleEndian(vars.watchers["IGT"].Current) / (double)vars.watchers["FrameRate"].Current) * 10) / 10);
 
     if (timer.CurrentPhase == TimerPhase.NotRunning)
-    {
         vars.AccumulatedIGT = TimeSpan.Zero;
-        vars.BufferIGT = TimeSpan.Zero;
-    }
 
-    if (current.rawIGT < old.rawIGT)
-        vars.AccumulatedIGT += old.rawIGT;
-}
-
-onStart
-{
-    vars.BufferIGT = current.rawIGT;
+    if (current.IGT < old.IGT)
+        vars.AccumulatedIGT += old.IGT;
 }
 
 gameTime

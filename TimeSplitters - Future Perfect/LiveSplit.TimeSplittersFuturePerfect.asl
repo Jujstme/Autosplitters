@@ -103,7 +103,7 @@ update
 
     // Calculate the IGT based on 
     current.IGT = vars.watchers["Status"].Current > 7 || vars.watchers["Status"].Current == 2
-        ? old.rawIGT
+        ? old.IGT
         : TimeSpan.FromSeconds(Math.Truncate((vars.IntToLittleEndian(vars.watchers["IGT"].Current) / (double)vars.watchers["FrameRate"].Current) * 10) / 10);
 
     if (timer.CurrentPhase == TimerPhase.NotRunning)

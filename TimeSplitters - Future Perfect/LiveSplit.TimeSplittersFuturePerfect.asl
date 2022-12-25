@@ -147,7 +147,7 @@ update
             vars.watchers.UpdateAll(game);
 
             // If the game doesn't have a valid ID, it means PCSX2 loaded another game. In that case, disable autosplitting funcionality
-            if (!vars.Gamecodes.ContainsKey(vars.watchers["Gamecode"].Current))
+            if (vars.watchers["Gamecode"].Current == null || !vars.Gamecodes.ContainsKey(vars.watchers["Gamecode"].Current))
                 return false;
 
             // gc is used to differentiale between PAL and NTSC versions of the game, as they use different addresses

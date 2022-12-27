@@ -19,6 +19,7 @@ state("retroarch") {}
 state("psxfin") {}
 state("pcsx-redux.main") {}
 state("xebra") {}
+state("EmuHawk") {}
 
 init
 {
@@ -223,6 +224,31 @@ init
                     {
                         vars.watchers = GetWatchers(WRAMbase);
                         vars.KeepAlive = (Func<bool>)(() => true);
+                        vars.InitCompleted = true;
+                    }
+                });
+            });
+            break;
+
+        case "emuhawk":
+            vars.InitTask = (Action)(() => {
+                vars.InitCompleted = false;
+                vars.CancelSource = new CancellationTokenSource();
+
+                System.Threading.Tasks.Task.Run(async () =>
+                {
+                    IntPtr WRAMbase = IntPtr.Zero;
+                    while (!vars.CancelSource.IsCancellationRequested && WRAMbase == IntPtr.Zero)
+                    {
+                        WRAMbase = game.MemoryPages(true).FirstOrDefault(p => p.Type == MemPageType.MEM_MAPPED && (int)p.RegionSize == 0xD819000).BaseAddress;
+                        if (WRAMbase == IntPtr.Zero) await System.Threading.Tasks.Task.Delay(2000, vars.CancelSource.Token);
+                        else WRAMbase += 0x2FADC0;
+                    }
+
+                    if (!vars.CancelSource.IsCancellationRequested)
+                    {
+                        vars.watchers = GetWatchers(WRAMbase);
+                        vars.KeepAlive = (Func<bool>)(() => { byte[] buffer; return game.ReadBytes(WRAMbase, 1, out buffer); });
                         vars.InitCompleted = true;
                     }
                 });

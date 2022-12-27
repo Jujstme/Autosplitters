@@ -8,6 +8,7 @@
 //  - pSX
 //  - PCSX-Redux
 //  - Xebra
+//  - BizHawk
 //
 // If you need the script to support some other emulator not listed above
 // please contact me by opening a new issue on https://github.com/Jujstme/Autosplitters

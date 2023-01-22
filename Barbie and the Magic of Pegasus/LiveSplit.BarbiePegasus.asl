@@ -38,7 +38,7 @@ startup
         { "encampment",        () => vars.watchers["Scene"].Old == "Encampment - Mystical Rays"             && vars.watchers["Scene"].Current == "Fjord - Dodging Gryphons" },
         { "wenlockapproach",   () => vars.watchers["Scene"].Old == "Wenlocks - Runes"                       && vars.watchers["Scene"].Current == "Wenlocks - Lantern Game" },
         { "wenlocksstones",    () => vars.watchers["Scene"].Old == "Wenlocks - Stepping Stones"             && vars.watchers["Scene"].Current == "Wenlocks - Wenlocks Puzzle"},
-        { "wenlock",           () => vars.watchers["Scene"].Current == "Wenlocks - Good V's Bad"            && !vars.watchers["GameComeplete"].Old && vars.watchers["GameComplete"].Current },
+        { "wenlock",           () => vars.watchers["Scene"].Current == "Wenlocks - Good V's Bad"            && !vars.watchers["GameComplete"].Old && vars.watchers["GameComplete"].Current },
     };
 
     vars.AlreadySplitted = new List<string>();

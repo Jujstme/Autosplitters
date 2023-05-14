@@ -1,7 +1,7 @@
 // Autosplitter and load time remover for Kao The Kangaroo (2022)
-// Coding: Jujstme
+// Coding: Jujstme - ClashCode
 // contacts: just.tribe@gmail.com
-// Version: 1.0.0 (May 31st, 2022)
+// Version: 1.0.1 (May 14th, 2023)
 // Thanks to Ero for helping me understanding how Unreal Engine works
 
 state("Kao-Win64-Shipping") {}
@@ -27,7 +27,16 @@ startup
         { "spirits", "Temple of Spirits", null, true },
         { "funfair", "Sparkly Funfair",   null, true },
         { "crystal", "Crystal Caverns",   null, true },
-        { "dad",     "Eternal Chambers",  null, true }
+        { "dad",     "Eternal Chambers",  null, true },
+		{ "waterfallE",   	"(DLC) Waterfall Islands (Easy)",   null, true },
+		{ "waterfallH",   	"(DLC) Waterfall Islands (Hard)",   null, true },
+		{ "volcanoE",   	"(DLC) Volcano Peaks (Easy)", 	    null, true },
+		{ "volcanoH",   	"(DLC) Volcano Peaks (Hard)", 	    null, true },
+		{ "forsakenE",   	"(DLC) Forsaken Monastery (Easy)",  null, true },
+		{ "forsakenH",   	"(DLC) Forsaken Monastery (Hard)",  null, true },
+		{ "twistedE",   	"(DLC) Twisted Hideout (Easy)", 	null, true },
+		{ "twistedH",   	"(DLC) Twisted Hideout (Hard)",	    null, true },
+		{ "sea",   		 	"(DLC) The Eternal Sea",	        null, true },
     };
     // Autobuild the settings based on the info provided above
     for (int i = 0; i < Settings.GetLength(0); i++) settings.Add(Settings[i, 0], Settings[i, 3], Settings[i, 1], Settings[i, 2]);
@@ -56,7 +65,17 @@ startup
         { "spirits",    "Level_Frozen_04" },
         { "funfair",    "Level_IsleOfEternity_01" },
         { "crystal",    "Level_IsleOfEternity_03" },
-        { "dad",        "Level_IsleOfEternity_04" }
+        { "dad",        "Level_IsleOfEternity_04" },
+		// DLC Levels
+		{ "waterfallE", "CK_1_P_Easy"   },
+		{ "waterfallH", "CK_1_P"        },
+		{ "volcanoE",   "CK_2_P_Easy"   },
+		{ "volcanoH",   "CK_2_P"        },
+		{ "forsakenE",  "CK_3_P_Easy"   },
+		{ "forsakenH",  "CK_3_P"        },
+		{ "twistedE",   "CK_4_P_Easy"   },
+		{ "twistedH",   "CK_4_P"        },
+		{ "sea",        "CK_5_P"        },
     };
 
     // SplitBools: a dictionary of booleans that will tell us if we met the conditions to split at a certain point during the run
@@ -76,7 +95,16 @@ startup
         { "spirits",    () => vars.watchers["Level"].Old == vars.Levels["spirits"] && vars.watchers["Level"].Old != vars.watchers["Level"].Current },
         { "funfair",    () => vars.watchers["Level"].Old == vars.Levels["funfair"] && vars.watchers["Level"].Old != vars.watchers["Level"].Current },
         { "crystal",    () => vars.watchers["Level"].Old == vars.Levels["crystal"] && vars.watchers["Level"].Old != vars.watchers["Level"].Current },
-        { "dad",        () => vars.watchers["Level"].Current == vars.Levels["dad"] && vars.watchers["Level"].Old == vars.watchers["Level"].Current && vars.watchers["FBHealth"].Old > 0 && vars.watchers["FBHealth"].Current == 0 }
+        { "dad",        () => vars.watchers["Level"].Current == vars.Levels["dad"] && vars.watchers["Level"].Old == vars.watchers["Level"].Current && vars.watchers["FBHealth"].Old > 0 && vars.watchers["FBHealth"].Current == 0 },
+		{ "waterfallE", () => vars.watchers["Level"].Old == vars.Levels["waterfallE"] && vars.watchers["Level"].Old != vars.watchers["Level"].Current },
+		{ "waterfallH", () => vars.watchers["Level"].Old == vars.Levels["waterfallH"] && vars.watchers["Level"].Old != vars.watchers["Level"].Current },
+		{ "volcanoE",   () => vars.watchers["Level"].Old == vars.Levels["volcanoE"]   && vars.watchers["Level"].Old != vars.watchers["Level"].Current },
+		{ "volcanoH",   () => vars.watchers["Level"].Old == vars.Levels["volcanoH"]   && vars.watchers["Level"].Old != vars.watchers["Level"].Current },
+		{ "forsakenE",  () => vars.watchers["Level"].Old == vars.Levels["forsakenE"]  && vars.watchers["Level"].Old != vars.watchers["Level"].Current },
+		{ "forsakenH",  () => vars.watchers["Level"].Old == vars.Levels["forsakenH"]  && vars.watchers["Level"].Old != vars.watchers["Level"].Current },
+		{ "twistedE",   () => vars.watchers["Level"].Old == vars.Levels["twistedE"]   && vars.watchers["Level"].Old != vars.watchers["Level"].Current },
+		{ "twistedH",   () => vars.watchers["Level"].Old == vars.Levels["twistedH"]   && vars.watchers["Level"].Old != vars.watchers["Level"].Current },
+        { "sea",        () => vars.watchers["Level"].Current == vars.Levels["sea"]    && vars.watchers["Level"].Old == vars.watchers["Level"].Current && vars.watchers["RClawHealth"].Old + vars.watchers["LClawHealth"].Old > 0 && vars.watchers["RClawHealth"].Current + vars.watchers["LClawHealth"].Current == 0 },
     };
 
     vars.AlreadySplitted = new List<string>();
